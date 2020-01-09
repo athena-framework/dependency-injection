@@ -8,7 +8,7 @@ license: MIT
 
 repository: https://github.com/athena-framework/di
 
-documentation: https://athena-framework.github.io/di/Athena/Di.html
+documentation: https://athena-framework.github.io/di/Athena/DI.html
 
 description: |
   Flexible instance based dependency injection service container library.

@@ -6,6 +6,8 @@ on:
       - '*/*'
       -  '*'
       - '!master'
+  schedule:
+    - cron: '0 21 * * *'
 
 jobs:
   check_format:

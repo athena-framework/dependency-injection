@@ -1,5 +1,8 @@
 # DI
 
+[![Build Status](https://img.shields.io/github/workflow/status/athena-framework/di/CI)](https://github.com/athena-framework/di/actions)
+[![Latest release](https://img.shields.io/github/release/athena-framework/di.svg?style=flat-square)](https://github.com/athena-framework/di/releases)
+
 Flexible instance based dependency injection service container library.
 
 ## Installation
@@ -16,7 +19,7 @@ dependencies:
 
 ## Documentation
 
-Everything is documented in the [API Docs](https://athena-framework.github.io/config/Athena/DI.html).
+Everything is documented in the [API Docs](https://athena-framework.github.io/di/Athena/DI.html).
 
 ## Contributing
 
