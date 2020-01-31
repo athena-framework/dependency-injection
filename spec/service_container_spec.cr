@@ -7,12 +7,12 @@ abstract class FakeServices
   include ADI::Service
 end
 
-@[Athena::DI::Register]
+@[ADI::Register]
 class FakeService < FakeServices
   include ADI::Service
 end
 
-@[Athena::DI::Register(name: "custom_fake")]
+@[ADI::Register(name: "custom_fake")]
 class CustomFooFakeService < FakeServices
   include ADI::Service
 end
@@ -27,8 +27,8 @@ class StaticArgs
   end
 end
 
-@[Athena::DI::Register("GOOGLE", "Google", name: "google", tags: ["feed_partner", "partner"])]
-@[Athena::DI::Register("FACEBOOK", "Facebook", name: "facebook", tags: ["partner"])]
+@[ADI::Register("GOOGLE", "Google", name: "google", tags: ["feed_partner", "partner"])]
+@[ADI::Register("FACEBOOK", "Facebook", name: "facebook", tags: ["partner"])]
 struct FeedPartner
   include ADI::Service
 
@@ -38,7 +38,7 @@ struct FeedPartner
   def initialize(@id : String, @name : String); end
 end
 
-@[Athena::DI::Register("!partner")]
+@[ADI::Register("!partner")]
 class PartnerManager
   include ADI::Service
 
@@ -49,14 +49,14 @@ class PartnerManager
 end
 
 class PartnerParamConverter
-  include Athena::DI::Injectable
+  include ADI::Injectable
 
   getter manager
 
   def initialize(@manager : PartnerManager); end
 end
 
-@[Athena::DI::Register(public: true)]
+@[ADI::Register(public: true)]
 class Store
   include ADI::Service
 
@@ -68,7 +68,7 @@ class FakeStore < Store
 end
 
 class SomeClass
-  include Athena::DI::Injectable
+  include ADI::Injectable
 
   getter store : Store
 
@@ -76,7 +76,7 @@ class SomeClass
 end
 
 class OtherClass
-  include Athena::DI::Injectable
+  include ADI::Injectable
 
   getter store : Store
   getter id : String
@@ -84,7 +84,7 @@ class OtherClass
   def initialize(@store : Store, @id : String); end
 end
 
-@[Athena::DI::Register("@blah", "a_string", "@a_service")]
+@[ADI::Register("@blah", "a_string", "@a_service")]
 class AService2
   include ADI::Service
 
@@ -95,14 +95,14 @@ class AService2
   def initialize(@blah : Blah, @foo : String, @ase : AService); end
 end
 
-@[Athena::DI::Register("@blah", "@some_service")]
+@[ADI::Register("@blah", "@some_service")]
 class AService
   include ADI::Service
 
   def initialize(@blah : Blah, @foo : Foo); end
 end
 
-@[Athena::DI::Register("@some_service", 99_i64)]
+@[ADI::Register("@some_service", 99_i64)]
 class Blah
   include ADI::Service
 
@@ -112,7 +112,7 @@ class Blah
   def initialize(@foo : Foo, @val : Int64); end
 end
 
-@[Athena::DI::Register(name: "some_service")]
+@[ADI::Register(name: "some_service")]
 class Foo
   include ADI::Service
 
@@ -120,14 +120,14 @@ class Foo
 end
 
 class FooBar
-  include Athena::DI::Injectable
+  include ADI::Injectable
 
   getter serv : AService2
 
   def initialize(@serv : AService2); end
 end
 
-describe Athena::DI::ServiceContainer do
+describe ADI::ServiceContainer do
   describe "#get" do
     describe "by type" do
       it "should return an array of services with that type" do
@@ -228,7 +228,7 @@ describe Athena::DI::ServiceContainer do
     end
 
     it "should return the service with the given tag" do
-      CONTAINER.tagged("fake_tag").should eq [] of Athena::DI::Service
+      CONTAINER.tagged("fake_tag").should eq [] of ADI::Service
     end
   end
 

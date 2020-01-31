@@ -1,6 +1,6 @@
 require "../spec_helper"
 
-@[Athena::DI::Register]
+@[ADI::Register]
 class Store
   include ADI::Service
 

@@ -1,7 +1,7 @@
-# DI
+# Dependency Injection
 
-[![Build Status](https://img.shields.io/github/workflow/status/athena-framework/di/CI)](https://github.com/athena-framework/di/actions)
-[![Latest release](https://img.shields.io/github/release/athena-framework/di.svg?style=flat-square)](https://github.com/athena-framework/di/releases)
+[![Build Status](https://img.shields.io/github/workflow/status/athena-framework/dependency-injection/CI)](https://github.com/athena-framework/dependency-injection/actions)
+[![Latest release](https://img.shields.io/github/release/athena-framework/dependency-injection.svg?style=flat-square)](https://github.com/athena-framework/dependency-injection/releases)
 
 Flexible instance based dependency injection service container library.
 
@@ -11,19 +11,19 @@ Flexible instance based dependency injection service container library.
 
 ```yaml
 dependencies:
-  athena-di:
-    github: athena-framework/di
+  athena-dependency_injection:
+    github: athena-framework/dependency-injection
 ```
 
 2. Run `shards install`
 
 ## Documentation
 
-Everything is documented in the [API Docs](https://athena-framework.github.io/di/Athena/DI.html).
+Everything is documented in the [API Docs](https://athena-framework.github.io/dependency-injection/Athena/DependencyInjection.html).
 
 ## Contributing
 
-1. Fork it (https://github.com/athena-framework/di/fork)
+1. Fork it (https://github.com/athena-framework/dependency-injection/fork)
 2. Create your feature branch (`git checkout -b my-new-feature`)
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)

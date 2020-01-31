@@ -1,11 +1,11 @@
 require "./spec_helper"
 
-describe Athena::DI do
-  describe Athena::DI::ServiceContainer do
+describe Athena::DependencyInjection do
+  describe Athena::DependencyInjection::ServiceContainer do
     describe "compiler errors" do
       describe "when trying to access a private service directly" do
         it "should not compile" do
-          assert_error "compiler/private_service.cr", "private method 'store' called for Athena::DI::ServiceContainer"
+          assert_error "compiler/private_service.cr", "private method 'store' called for Athena::DependencyInjection::ServiceContainer"
         end
       end
 

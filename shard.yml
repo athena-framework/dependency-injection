@@ -1,4 +1,4 @@
-name: athena-di
+name: athena-dependency_injection
 
 version: 0.1.0
 
@@ -6,9 +6,9 @@ crystal: 0.32.0
 
 license: MIT
 
-repository: https://github.com/athena-framework/di
+repository: https://github.com/athena-framework/dependency-injection
 
-documentation: https://athena-framework.github.io/di/Athena/DI.html
+documentation: https://athena-framework.github.io/dependency-injection/Athena/DependencyInjection.html
 
 description: |
   Flexible instance based dependency injection service container library.
