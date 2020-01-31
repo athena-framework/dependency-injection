@@ -1,7 +1,7 @@
 require "spec"
-require "../src/athena-di"
+require "../src/athena-dependency_injection"
 
-CONTAINER = Athena::DI::ServiceContainer.new
+CONTAINER = ADI::ServiceContainer.new
 
 # Asserts compile time errors given a *path* to a program and a *message*.
 def assert_error(path : String, message : String) : Nil

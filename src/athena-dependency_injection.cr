@@ -2,16 +2,16 @@ require "./service_container"
 
 # :nodoc:
 class Fiber
-  property container : Athena::DI::ServiceContainer { Athena::DI::ServiceContainer.new }
+  property container : ADI::ServiceContainer { ADI::ServiceContainer.new }
 end
 
-# Convenience alias to make referencing `Athena::DI` types easier.
-alias ADI = Athena::DI
+# Convenience alias to make referencing `Athena::DependencyInjection` types easier.
+alias ADI = Athena::DependencyInjection
 
-# Athena's Dependency Injection (DI) component adds a service container layer to your project.  This allows a project to share useful objects, aka services, throughout the project.
-# These objects live in a special struct called the `Athena::DI::ServiceContainer` (SC).  Object instances can be retrieved from the container, or even injected directly into types as a form of constructor DI.
+# Athena's Dependency Injection (DI) component, `ADI` for short, adds a service container layer to your project.  This allows a project to share useful objects, aka services, throughout the project.
+# These objects live in a special struct called the `ADI::ServiceContainer` (SC).  Object instances can be retrieved from the container, or even injected directly into types as a form of constructor DI.
 #
-# The SC is lazily initialized on fibers; this allows the SC to be accessed anywhere within the project.  The `Athena::DI.container` method will return the SC for the current fiber.
+# The SC is lazily initialized on fibers; this allows the SC to be accessed anywhere within the project.  The `ADI.container` method will return the SC for the current fiber.
 # Since the SC is defined on fibers, it allows for each fiber to have its own SC.  This can be useful for web frameworks as each request would have its own SC scoped to that request.
 # This however, is up to the each project to implement.
 #
@@ -22,7 +22,7 @@ alias ADI = Athena::DI
 # NOTE: It is highly recommended to use interfaces as opposed to concrete types when defining the initializers for both services and non-services.
 # Using interfaces allows changing the functionality of a type by just changing what service gets injected into it.
 # See this [blog post](https://dev.to/blacksmoke16/dependency-injection-in-crystal-2d66#plug-and-play) for an example of this.
-module Athena::DI
+module Athena::DependencyInjection
   # Stores metadata associated with a specific service.
   #
   # The type of the service affects how it behaves within the container.  When a `struct` service is retrieved or injected into a type, it will be a copy of the one in the SC (passed by value).
@@ -120,8 +120,8 @@ module Athena::DI
   # See `ADI::Register` for more details.
   module Service; end
 
-  # Returns the `Athena::DI::ServiceContainer` for the current fiber.
-  def self.container : Athena::DI::ServiceContainer
+  # Returns the `ADI::ServiceContainer` for the current fiber.
+  def self.container : ADI::ServiceContainer
     Fiber.current.container
   end
 
@@ -189,7 +189,7 @@ module Athena::DI
             def self.new(**args)
               new(
                 {% for arg in initializer.args %}
-                  {{arg.name.id}}: args[{{arg.name.symbolize}}]? || Athena::DI.container.resolve({{arg.restriction.id}}, {{arg.name.stringify}}),
+                  {{arg.name.id}}: args[{{arg.name.symbolize}}]? || ADI.container.resolve({{arg.restriction.id}}, {{arg.name.stringify}}),
                 {% end %}
               )
             end

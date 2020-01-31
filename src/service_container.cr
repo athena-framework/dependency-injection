@@ -2,7 +2,7 @@
 #
 # A getter is defined for each service, if it is public.
 # Otherwise, services are only available via constructor DI.
-struct Athena::DI::ServiceContainer
+struct Athena::DependencyInjection::ServiceContainer
   # Mapping of tag name to services with that tag.
   getter tags : Hash(String, Array(String)) = Hash(String, Array(String)).new
 
