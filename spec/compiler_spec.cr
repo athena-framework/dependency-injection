@@ -17,7 +17,7 @@ describe Athena::DependencyInjection do
 
       describe "when a service has a non optional service dependency but it could not be resolved" do
         it "should not compile" do
-          assert_error "compiler/missing_non_optional_service.cr", "Could not resolve dependency 'the_service' for service 'Klass'.  Did you forget to include `ADI::Service` or declare it optional?"
+          assert_error "compiler/missing_non_optional_service.cr", "Could not resolve dependency 'missing_service' for service 'Klass'.  Did you forget to include `ADI::Service` or declare it optional?"
         end
       end
     end

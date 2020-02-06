@@ -1,6 +1,8 @@
 require "spec"
 require "../src/athena-dependency_injection"
 
+require "./mocks"
+
 CONTAINER = ADI::ServiceContainer.new
 
 # Asserts compile time errors given a *path* to a program and a *message*.

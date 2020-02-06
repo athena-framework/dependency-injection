@@ -1,14 +1,14 @@
 require "../spec_helper"
 
 @[ADI::Register]
-class TheService
+class MissingService
 end
 
-@[ADI::Register("@the_service")]
+@[ADI::Register("@missing_service")]
 class Klass
   include ADI::Service
 
-  def initialize(@service : TheService); end
+  def initialize(@service : MissingService); end
 end
 
 ADI::ServiceContainer.new

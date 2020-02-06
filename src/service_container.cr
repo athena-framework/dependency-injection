@@ -15,7 +15,6 @@ struct Athena::DependencyInjection::ServiceContainer
           {% raise "#{service.name} includes `ADI::Service` but is not registered.  Did you forget the annotation?" if (annotations = service.annotations(ADI::Register)) && annotations.empty? && !service.abstract? %}
           {% for ann in annotations %}
             {% key = ann[:name] ? ann[:name] : service.name.split("::").last.underscore %}
-
             {% services[key.id] = {"public" => ann[:public], "type" => service.id} %}
           {% end %}
         {% end %}
