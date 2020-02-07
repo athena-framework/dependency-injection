@@ -113,6 +113,26 @@ module Athena::DependencyInjection
   #   def initialize(@types : Array(SomeParentType)); end
   # end
   # ```
+  #
+  # ### Redefining Services
+  # Services can be redefined by registering another service with the same name.  The last defined service with that name will be used.
+  # This allows a custom implementation of a service to be used as a dependency to another service, or for injection into a non service type.
+  #
+  # ```
+  # @[ADI::Register]
+  # # The original ErrorRenderer, which could originate from an external shard.
+  # record ErrorRenderer, value : Int32 = 1 do
+  #   include ADI::Service
+  #   include ErrorRendererInterface
+  # end
+  #
+  # @[ADI::Register(name: "error_renderer"]
+  # # The redefined service, any references to `error_renderer`, or `ErrorRendererInterface` will now resolve to `CustomErrorRenderer`.
+  # record CustomErrorRenderer, value : Int32 = 2 do
+  #   include ADI::Service
+  #   include ErrorRendererInterface
+  # end
+  # ```
   annotation Register; end
 
   # Used to designate a type as a service.

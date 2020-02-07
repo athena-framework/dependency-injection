@@ -8,17 +8,21 @@ struct Athena::DependencyInjection::ServiceContainer
 
   macro finished
       {% begin %}
-        # Define a `getter` in the container for each registered service.
+        # Define a temp hash to handle overriding services
+        {% services = {} of Nil => Nil %}
+
         {% for service in ADI::Service.includers %}
-          {% if (annotations = service.annotations(ADI::Register)) && !annotations.empty? %}
-            {% for service_ann in service.annotations(ADI::Register) %}
-              {% key = service_ann[:name] ? service_ann[:name] : service.name.split("::").last.underscore %}
-              # Only make the getter public if the service is public
-              {% if service_ann[:public] != true %} private {% end %}getter {{key.id}} : {{service.id}}
-            {% end %}
-          {% else %}
-            {% raise "#{service.name} includes `ADI::Service` but is not registered.  Did you forget the annotation?" unless service.abstract? %}
+          {% raise "#{service.name} includes `ADI::Service` but is not registered.  Did you forget the annotation?" if (annotations = service.annotations(ADI::Register)) && annotations.empty? && !service.abstract? %}
+          {% for ann in annotations %}
+            {% key = ann[:name] ? ann[:name] : service.name.split("::").last.underscore %}
+            {% services[key.id] = {"public" => ann[:public], "type" => service.id} %}
           {% end %}
+        {% end %}
+
+        # Define a `getter` in the container for each registered service.
+        {% for name, service in services %}
+          # Only make the getter public if the service is public
+          {% if service["public"] != true %} private {% end %}getter {{name}} : {{service["type"]}}
         {% end %}
       {% end %}
     end
@@ -35,8 +39,11 @@ struct Athena::DependencyInjection::ServiceContainer
         # Mapping of tag name to services with that tag.
         {% tagged_services = {} of String => Array(String) %}
 
-        # Obtain an array of registered services.
-        {% services = ADI::Service.includers.select { |type| type.annotation(ADI::Register) } %}
+        # Generate an array of types registered with the SC, used to allow for redefining services.
+        {% service_types = @type.instance_vars.map(&.type.stringify) %}
+
+        # Obtain an array of registered services, exclude any that have not already been registered.
+        {% services = ADI::Service.includers.select { |type| type.annotation(ADI::Register) && service_types.includes? type.stringify } %}
 
         # Array of services that have no dependencies.
         {% no_dependency_services = services.select { |service| init = service.methods.find(&.name.==("initialize")); !init || init.args.size == 0 } %}
