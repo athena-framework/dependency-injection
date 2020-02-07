@@ -39,7 +39,7 @@ struct Athena::DependencyInjection::ServiceContainer
         # Mapping of tag name to services with that tag.
         {% tagged_services = {} of String => Array(String) %}
 
-        # Generate an array of types registered with the SC, used to allow for type overriding.
+        # Generate an array of types registered with the SC, used to allow for redefining services.
         {% service_types = @type.instance_vars.map(&.type.stringify) %}
 
         # Obtain an array of registered services, exclude any that have not already been registered.

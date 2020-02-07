@@ -115,12 +115,12 @@ module Athena::DependencyInjection
   # ```
   #
   # ### Redefining Services
-  # Services can be redefined by registering another service with the same service name.  The last defined service with that name will be used.
+  # Services can be redefined by registering another service with the same name.  The last defined service with that name will be used.
   # This allows a custom implementation of a service to be used as a dependency to another service, or for injection into a non service type.
   #
   # ```
   # @[ADI::Register]
-  # # The original ErrorRenderer, which could originate an external shard.
+  # # The original ErrorRenderer, which could originate from an external shard.
   # record ErrorRenderer, value : Int32 = 1 do
   #   include ADI::Service
   #   include ErrorRendererInterface
