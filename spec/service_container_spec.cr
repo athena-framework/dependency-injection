@@ -108,4 +108,18 @@ describe ADI::ServiceContainer do
       CONTAINER.tagged("fake_tag").should eq [] of ADI::Service
     end
   end
+
+  describe "optional" do
+    describe "that is not registered" do
+      it "should supply nil" do
+        CONTAINER.optional_missing.service.should be_nil
+      end
+    end
+
+    describe "that is registered" do
+      it "should supply the service" do
+        CONTAINER.optional_registered.logger.should be_a Logger
+      end
+    end
+  end
 end

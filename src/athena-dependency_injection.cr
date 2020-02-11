@@ -66,7 +66,7 @@ module Athena::DependencyInjection
   # ```
   #
   # ### Service Dependencies
-  # Services can be injected into another service by prefixing a string containing the service's name, prefixed with an `@` symbol.
+  # Services can be injected into another service by providing the name of the service as a string, prefixed with an `@` symbol.
   # This syntax also works within arrays if you wished to inject a static set of services.
   #
   # ```
@@ -82,6 +82,24 @@ module Athena::DependencyInjection
   #   include ADI::Service
   #
   #   def initialize(@store : Store); end
+  # end
+  # ```
+  #
+  # ### Optional Dependencies
+  # Services can be defined with optional dependencies by providing the name of the service as a string, prefixed with an `@?` symbol.
+  # Optional dependencies will supply `nil` to the initializer versus raising a compile time error if that service does not exist.
+  #
+  # ```
+  # @[ADI::Register("@?logger")]
+  # # Defines an optional dependency for the `logger` service.
+  # class Example
+  #   include ADI::Service
+  #
+  #   def initialize(logger : Logger?)
+  #     @logger = logger
+  #     # You could also instantiate another type if the ivar should remain not nilable
+  #     # @logger = logger || SomeDefaultLogger.new
+  #   end
   # end
   # ```
   #
