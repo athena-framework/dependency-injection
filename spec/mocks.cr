@@ -136,3 +136,30 @@ end
 record CustomErrorRenderer, value : Int32 = 2 do
   include ADI::Service
 end
+
+# Optional Dependencies
+
+class MissingService; end
+
+@[ADI::Register("@?missing_service", public: true)]
+class OptionalMissing
+  include ADI::Service
+
+  getter service : MissingService?
+
+  def initialize(@service : MissingService?); end
+end
+
+@[ADI::Register]
+class Logger
+  include ADI::Service
+end
+
+@[ADI::Register("@?logger", public: true)]
+class OptionalRegistered
+  include ADI::Service
+
+  getter logger : Logger?
+
+  def initialize(@logger : Logger?); end
+end
