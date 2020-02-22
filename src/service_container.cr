@@ -213,8 +213,13 @@ struct Athena::DependencyInjection::ServiceContainer
   end
 
   # Returns an `Array(ADI::Service)` for services of *type*.
-  private def get_services_by_type(type : _)
-    {{{@type.instance_vars.reject(&.name.==("tags")).map(&.id).splat}}}.select(&.class.<=(type))
+  private def get_services_by_type(type : T) forall T
+    {% begin %}
+      # Select the services that `T` is included in if it's a `:Module` type.
+      # Next, select services that are, or a child of, `T`.
+      {% services = @type.instance_vars.select { |iv| T.instance.resolve.includers.includes?(iv.type.resolve) || iv.type.resolve.class <= T.resolve } %}
+      {% if services.empty? %}[] of ADI::Service{% else %}{{services}}{% end %}
+    {% end %}
   end
 
   # Returns a Tuple of registered service names.
@@ -225,11 +230,11 @@ struct Athena::DependencyInjection::ServiceContainer
   # Attempts to resolve the provided *name* into a service.
   private def internal_get(name : String) : ADI::Service?
     {% begin %}
-        case name
-        {% for ivar in @type.instance_vars.reject(&.name.==("tags")) %}
-          when {{ivar.name.stringify}} then {{ivar.id}}
-        {% end %}
-        end
+      case name
+      {% for ivar in @type.instance_vars.reject(&.name.==("tags")) %}
+        when {{ivar.name.stringify}} then {{ivar.id}}
       {% end %}
+      end
+    {% end %}
   end
 end
