@@ -217,7 +217,7 @@ struct Athena::DependencyInjection::ServiceContainer
     {% begin %}
       # Select the services that `T` is included in if it's a `:Module` type.
       # Next, select services that are, or a child of, `T`.
-      {% services = @type.instance_vars.select { |iv| T.instance.resolve.includers.includes?(iv.type.resolve) || iv.type.resolve.class <= T.resolve } %}
+      {% services = @type.instance_vars.select { |iv| T.instance.resolve.includers.any?(&.<=(iv.type.resolve)) || iv.type.resolve.class <= T.resolve } %}
       {% if services.empty? %}[] of ADI::Service{% else %}{{services}}{% end %}
     {% end %}
   end
