@@ -23,6 +23,8 @@ alias ADI = Athena::DependencyInjection
 # Using interfaces allows changing the functionality of a type by just changing what service gets injected into it.
 # See this [blog post](https://dev.to/blacksmoke16/dependency-injection-in-crystal-2d66#plug-and-play) for an example of this.
 module Athena::DependencyInjection
+  module CompilerPass; end
+
   # Stores metadata associated with a specific service.
   #
   # The type of the service affects how it behaves within the container.  When a `struct` service is retrieved or injected into a type, it will be a copy of the one in the SC (passed by value).
@@ -237,3 +239,45 @@ module Athena::DependencyInjection
     end
   end
 end
+
+@[ADI::Register("@foo")]
+class Bar
+  include ADI::Service
+
+  def initialize(@foo : Foo); end
+end
+
+@[ADI::Register(1, "fred", false)]
+class Foo
+  include ADI::Service
+
+  def initialize(@id : Int32, @name : String, @active : Bool); end
+end
+
+@[ADI::Register]
+class Blah
+  include ADI::Service
+end
+
+@[ADI::Register("@?blah")]
+class Baz
+  include ADI::Service
+
+  def initialize(@blah : Blah?); end
+end
+
+@[ADI::Register(lazy: true, public: false)]
+class Lazy
+  include ADI::Service
+
+  def initialize
+    pp "new lazy"
+  end
+end
+
+@[ADI::Register(public: true)]
+class Public
+  include ADI::Service
+end
+
+pp ADI::ServiceContainer.new
