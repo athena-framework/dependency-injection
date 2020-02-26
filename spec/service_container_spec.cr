@@ -1,6 +1,6 @@
 require "./spec_helper"
 
-describe ADI::ServiceContainer do
+pending ADI::ServiceContainer do
   describe "#get" do
     describe "by type" do
       it "should return an array of services with that type" do

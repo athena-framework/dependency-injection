@@ -154,6 +154,7 @@ module Athena::DependencyInjection
   # end
   # ```
   annotation Register; end
+  annotation Inject; end
 
   # Used to designate a type as a service.
   #
@@ -240,11 +241,29 @@ module Athena::DependencyInjection
   end
 end
 
-@[ADI::Register("@foo")]
+abstract class FakeServices
+  include ADI::Service
+end
+
+@[ADI::Register]
+class FakeService < FakeServices
+  include ADI::Service
+
+  def initialize; end
+end
+
+@[ADI::Register(name: "custom_fake")]
+class CustomFooFakeService < FakeServices
+  include ADI::Service
+
+  def initialize; end
+end
+
+@[ADI::Register(_name: "JIM")]
 class Bar
   include ADI::Service
 
-  def initialize(@foo : Foo); end
+  def initialize(@fake_service : FakeServices, @custom_fake : FakeServices, @name : String); end
 end
 
 @[ADI::Register(1, "fred", false)]
@@ -266,7 +285,16 @@ class Baz
   def initialize(@blah : Blah?); end
 end
 
-@[ADI::Register(lazy: true, public: false)]
+@[ADI::Register(public: true)]
+class Public
+  include ADI::Service
+
+  def initialize
+    pp "new public"
+  end
+end
+
+@[ADI::Register(lazy: true, public: true)]
 class Lazy
   include ADI::Service
 
@@ -275,9 +303,13 @@ class Lazy
   end
 end
 
-@[ADI::Register(public: true)]
-class Public
-  include ADI::Service
-end
+# cont = {"$foo": "bar", bar: 19}
 
-pp ADI::ServiceContainer.new
+cont = ADI::ServiceContainer.new
+
+pp cont
+
+# l = cont.lazy
+
+# pp l
+# pp l
