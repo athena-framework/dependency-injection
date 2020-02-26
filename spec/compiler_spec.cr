@@ -1,6 +1,6 @@
 require "./spec_helper"
 
-describe Athena::DependencyInjection do
+pending Athena::DependencyInjection do
   describe Athena::DependencyInjection::ServiceContainer do
     describe "compiler errors" do
       describe "when trying to access a private service directly" do

@@ -1,6 +1,6 @@
 require "./spec_helper"
 
-describe ADI::Injectable do
+pending ADI::Injectable do
   describe "with only services" do
     it "should inject an instance of the Store class" do
       klass = SomeClass.new

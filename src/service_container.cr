@@ -21,11 +21,7 @@ struct Athena::DependencyInjection::ServiceContainer
 
   private macro get_initializer_args(service)
     initializer = service.methods.find(&.annotation(ADI::Inject)) || service.methods.find(&.name.==("initialize"))
-    if i = initializer
-      i.args
-    else
-      [] of Nil
-    end
+    (i = initializer) ? i.args : [] of Nil
   end
 
   private macro resolve_dependencies(service_hash, service, service_ann)
@@ -38,26 +34,35 @@ struct Athena::DependencyInjection::ServiceContainer
     else
       # Otherwise, try and auto resolve the arguments
       @type.get_initializer_args(service).map_with_index do |arg, idx|
-        resolved_services = [] of Nil
-
-        service_hash.each do |service_id, metadata|
-          if metadata[:type] <= arg.restriction.resolve
-            resolved_services << service_id
-          end
-        end
-
         # Check if an explicit value was passed for this arg
         if named_arg = service_ann.named_args["_#{arg.name}"]
           @type.parse_arg service_hash, service, named_arg, idx
-        # If no services could be resolved
-        elsif resolved_services.size == 0
-          # Otherwise raise an exception
-          arg.raise "Could not auto resolve argument #{arg}"  
-        elsif resolved_services.size == 1
-          resolved_services[0].id
         else
+          resolved_services = [] of Nil
 
-          resolved_services.find(&.==(arg.name)).id
+          # Otherwise resolve possible services based on type
+          service_hash.each do |service_id, metadata|
+            if metadata[:type] <= arg.restriction.resolve
+              resolved_services << service_id
+            end
+          end
+
+          # If no services could be resolved
+          if resolved_services.size == 0
+            # Return a default value if any
+            unless arg.default_value.is_a? Nop
+              arg.default_value
+            else
+              # otherwise raise an exception
+              arg.raise "Could not auto resolve argument #{arg}"
+            end
+          elsif resolved_services.size == 1
+            # If only one was matched, return it
+            resolved_services[0].id
+          else
+            # Otherwise fallback on the argument's name as well
+            resolved_services.find(&.==(arg.name)).id
+          end
         end
       end
     end
@@ -73,9 +78,7 @@ struct Athena::DependencyInjection::ServiceContainer
 
   private macro parse_arg(service_hash, service, arg, idx)
     if arg.is_a?(ArrayLiteral)
-      initializer = service.methods.find(&.name.==("initialize"))
-
-      %(#{arg.map_with_index { |arr_arg, arr_idx| @type.parse_arg service_hash, service, arr_arg, arr_idx }} of Union(#{initializer.args[idx].restriction.resolve.type_vars.splat})).id
+      %(#{arg.map_with_index { |arr_arg, arr_idx| @type.parse_arg service_hash, service, arr_arg, arr_idx }} of Union(#{@type.get_initializer_args(service)[idx].restriction.resolve.type_vars.splat})).id
     elsif @type.is_optional_service arg
       key = arg[2..-1]
 

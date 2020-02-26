@@ -266,6 +266,13 @@ class Bar
   def initialize(@fake_service : FakeServices, @custom_fake : FakeServices, @name : String); end
 end
 
+@[ADI::Register]
+class FooBar
+  include ADI::Service
+
+  def initialize(@obj : Foo); end
+end
+
 @[ADI::Register(1, "fred", false)]
 class Foo
   include ADI::Service
@@ -303,13 +310,4 @@ class Lazy
   end
 end
 
-# cont = {"$foo": "bar", bar: 19}
-
-cont = ADI::ServiceContainer.new
-
-pp cont
-
-# l = cont.lazy
-
-# pp l
-# pp l
+pp ADI::ServiceContainer.new
