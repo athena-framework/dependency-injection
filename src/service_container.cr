@@ -24,7 +24,7 @@ struct Athena::DependencyInjection::ServiceContainer
     (i = initializer) ? i.args : [] of Nil
   end
 
-  private macro resolve_dependencies(service_hash, service, service_ann)
+  private macro resolve_dependencies(service_hash, alias_hash, service, service_ann)
     # If positional arguments are provided,
     # use them to instantiate the object
     unless service_ann.args.empty?
@@ -61,7 +61,17 @@ struct Athena::DependencyInjection::ServiceContainer
             resolved_services[0].id
           else
             # Otherwise fallback on the argument's name as well
-            resolved_services.find(&.==(arg.name)).id
+            if resolved_service = resolved_services.find(&.==(arg.name))
+              resolved_service.id
+            # If no service with that name could be resolved,
+            # check the alias map for the restriction
+            elsif aliased_service = alias_hash[arg.restriction.resolve]
+              # If one is found returned the aliased service
+              aliased_service.id 
+            else
+              # Otherwise raise an exception
+              arg.raise "Could not auto resolve argument #{arg}"
+            end
           end
         end
       end
@@ -102,18 +112,25 @@ struct Athena::DependencyInjection::ServiceContainer
       # Key is the ID of the service and the value is another hash containing its arguments, type, etc.
       {% service_hash = {} of Nil => Nil %}
 
+      # Define a hash to map alias types to a service ID.
+      {% alias_hash = {} of Nil => Nil %}
+
       # Register each service in the hash along with some related metadata.
       {% for service in ADI::Service.includers %}
         {% raise "#{service.name} includes `ADI::Service` but is not registered.  Did you forget the annotation?" if (annotations = service.annotations(ADI::Register)) && annotations.empty? && !service.abstract? %}
         {% for ann in annotations %}
           {% key = ann[:name] ? ann[:name] : service.name.split("::").last.underscore %}
           {% service_hash[@type.stringify(key)] = {lazy: ann[:lazy] || false, public: ann[:public] || false, tags: ann[:tags] || [] of Nil, type: service, service_annotation: ann} %}
+
+          {% if ann[:alias] != nil %}
+            {% alias_hash[ann[:alias].resolve] = key %}
+          {% end %}
         {% end %}
       {% end %}
 
       # Resolve the arguments for each service
       {% for service_id, metadata in service_hash %}
-        {% service_hash[service_id][:arguments] = @type.resolve_dependencies service_hash, metadata[:type], metadata[:service_annotation] %}
+        {% service_hash[service_id][:arguments] = @type.resolve_dependencies service_hash, alias_hash, metadata[:type], metadata[:service_annotation] %}
       {% end %}
 
       # Run all the compiler passes

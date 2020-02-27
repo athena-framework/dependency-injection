@@ -242,7 +242,6 @@ module Athena::DependencyInjection
 end
 
 abstract class FakeServices
-  include ADI::Service
 end
 
 @[ADI::Register]
@@ -263,7 +262,7 @@ end
 class Bar
   include ADI::Service
 
-  def initialize(@fake_service : FakeServices, @custom_fake : FakeServices, @name : String); end
+  def initialize(@asdf : FakeServices, @name : String); end
 end
 
 @[ADI::Register]
@@ -285,12 +284,19 @@ class Blah
   include ADI::Service
 end
 
-@[ADI::Register("@?blah")]
-class Baz
+@[ADI::Register(decorates: "blah")]
+class BlahDecorator
   include ADI::Service
 
-  def initialize(@blah : Blah?); end
+  def initialize(@blah : Blah); end
 end
+
+# @[ADI::Register("@?blah")]
+# class Baz
+#   include ADI::Service
+
+#   def initialize(@blah : Blah?); end
+# end
 
 @[ADI::Register(public: true)]
 class Public
