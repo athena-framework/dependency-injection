@@ -241,55 +241,51 @@ module Athena::DependencyInjection
   end
 end
 
-abstract class FakeServices
-end
+# abstract class FakeServices
+# end
 
-@[ADI::Register]
-class FakeService < FakeServices
-  include ADI::Service
+# @[ADI::Register]
+# class FakeService < FakeServices
+#   include ADI::Service
+# end
 
-  def initialize; end
-end
+# @[ADI::Register(name: "custom_fake", alias: FakeServices)]
+# class CustomFooFakeService < FakeServices
+#   include ADI::Service
+# end
 
-@[ADI::Register(name: "custom_fake")]
-class CustomFooFakeService < FakeServices
-  include ADI::Service
+# @[ADI::Register(_name: "JIM")]
+# class Bar
+#   include ADI::Service
 
-  def initialize; end
-end
+#   def initialize(@asdf : FakeServices, @name : String); end
+# end
 
-@[ADI::Register(_name: "JIM")]
-class Bar
-  include ADI::Service
+# @[ADI::Register]
+# class FooBar
+#   include ADI::Service
 
-  def initialize(@asdf : FakeServices, @name : String); end
-end
+#   def initialize(@obj : Foo); end
+# end
 
-@[ADI::Register]
-class FooBar
-  include ADI::Service
+# @[ADI::Register(1, "fred", false)]
+# class Foo
+#   include ADI::Service
 
-  def initialize(@obj : Foo); end
-end
+#   def initialize(@id : Int32, @name : String, @active : Bool); end
+# end
 
-@[ADI::Register(1, "fred", false)]
-class Foo
-  include ADI::Service
+# @[ADI::Register]
+# class Blah
+#   include ADI::Service
+# end
 
-  def initialize(@id : Int32, @name : String, @active : Bool); end
-end
+# @[ADI::Register(decorates: "blah")]
+# class BlahDecorator
+#   include ADI::Service
 
-@[ADI::Register]
-class Blah
-  include ADI::Service
-end
-
-@[ADI::Register(decorates: "blah")]
-class BlahDecorator
-  include ADI::Service
-
-  def initialize(@blah : Blah); end
-end
+#   def initialize(@blah : Blah); end
+# end
 
 # @[ADI::Register("@?blah")]
 # class Baz
@@ -298,22 +294,45 @@ end
 #   def initialize(@blah : Blah?); end
 # end
 
-@[ADI::Register(public: true)]
-class Public
-  include ADI::Service
+# @[ADI::Register(public: true)]
+# class Public
+#   include ADI::Service
 
-  def initialize
-    pp "new public"
-  end
-end
+#   def initialize
+#     # pp "new public"
+#   end
+# end
 
-@[ADI::Register(lazy: true, public: true)]
-class Lazy
-  include ADI::Service
+# @[ADI::Register(lazy: true, public: true)]
+# class Lazy
+#   include ADI::Service
 
-  def initialize
-    pp "new lazy"
-  end
-end
+#   def initialize
+#     # pp "new lazy"
+#   end
+# end
 
-pp ADI::ServiceContainer.new
+# @[ADI::Register("GOOGLE", "Google", name: "google", tags: ["feed_partner", "partner"])]
+# @[ADI::Register("FACEBOOK", "Facebook", name: "facebook", tags: ["partner"])]
+# struct FeedPartner
+#   include ADI::Service
+
+#   getter id : String
+#   getter name : String
+
+#   def initialize(@id : String, @name : String); end
+# end
+
+# @[ADI::Register("!partner")]
+# class PartnerManager
+#   include ADI::Service
+
+#   getter partners
+
+#   def initialize(@partners : Array(FeedPartner))
+#   end
+# end
+
+# cont = ADI::ServiceContainer.new
+
+# pp cont.get Public

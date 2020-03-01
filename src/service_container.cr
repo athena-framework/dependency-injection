@@ -19,6 +19,18 @@ struct Athena::DependencyInjection::ServiceContainer
     arg.is_a?(StringLiteral) && arg.starts_with?('!')
   end
 
+  private macro get_service_key(service, service_ann)
+    @type.stringify(service_ann[:name] ? service_ann[:name] : service.name.split("::").last.underscore)
+  end
+
+  private macro get_service_hash_value(key, service, service_ann, alias_hash)
+    if service_ann[:alias] != nil
+      alias_hash[service_ann[:alias].resolve] = key
+    end
+
+    {lazy: service_ann[:lazy] || false, public: service_ann[:public] || false, tags: service_ann[:tags] || [] of Nil, type: service, service_annotation: service_ann}
+  end
+
   private macro get_initializer_args(service)
     initializer = service.methods.find(&.annotation(ADI::Inject)) || service.methods.find(&.name.==("initialize"))
     (i = initializer) ? i.args : [] of Nil
@@ -100,7 +112,7 @@ struct Athena::DependencyInjection::ServiceContainer
     elsif @type.is_service arg
       "#{arg[1..-1].id}".id
     elsif @type.is_tagged_service arg
-      @type.resolve_tags service_hash, arg[1..-1]
+      %(#{@type.resolve_tags service_hash, arg[1..-1]} of Union(#{@type.get_initializer_args(service)[idx].restriction.resolve.type_vars.splat})).id
     else
       arg
     end
@@ -119,12 +131,8 @@ struct Athena::DependencyInjection::ServiceContainer
       {% for service in ADI::Service.includers %}
         {% raise "#{service.name} includes `ADI::Service` but is not registered.  Did you forget the annotation?" if (annotations = service.annotations(ADI::Register)) && annotations.empty? && !service.abstract? %}
         {% for ann in annotations %}
-          {% key = ann[:name] ? ann[:name] : service.name.split("::").last.underscore %}
-          {% service_hash[@type.stringify(key)] = {lazy: ann[:lazy] || false, public: ann[:public] || false, tags: ann[:tags] || [] of Nil, type: service, service_annotation: ann} %}
-
-          {% if ann[:alias] != nil %}
-            {% alias_hash[ann[:alias].resolve] = key %}
-          {% end %}
+          {% key = @type.get_service_key service, ann %}
+          {% service_hash[key] = @type.get_service_hash_value key, service, ann, alias_hash %}
         {% end %}
       {% end %}
 
@@ -135,12 +143,19 @@ struct Athena::DependencyInjection::ServiceContainer
 
       # Run all the compiler passes
       {% for pass in ADI::CompilerPass.includers %}
-        {% service_hash = pass.process(service_hash) %}
+        {% service_hash = pass.process service_hash, alias_hash %}
       {% end %}
 
-      # Define getters for the services
       {% for service_id, metadata in service_hash %}
+        # Define a getter for the service, public if the service is public
         {% if metadata[:public] != true %}private{% end %} getter {{service_id.id}} : {{metadata[:type]}} { {{metadata[:type]}}.new({{metadata[:arguments].splat}}) }
+
+        # If the service is public, also define a getter to get it via type
+        {% if metadata[:public] %}
+          def get(service : {{metadata[:type]}}.class) : {{metadata[:type]}}
+            {{service_id.id}}
+          end
+        {% end %}
       {% end %}
 
       # Initializes the container.  Auto registering annotated services.
