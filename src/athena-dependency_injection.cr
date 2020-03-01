@@ -173,91 +173,17 @@ module Athena::DependencyInjection
   def self.container : ADI::ServiceContainer
     Fiber.current.container
   end
-
-  # Adds a new constructor that resolves the required services based on type and name.
-  #
-  # Can be included into a `class`/`struct` in order to automatically inject the required services from the container based on the type's initializer.
-  #
-  # Service lookup is based on the type restriction and name of the initializer arguments.  If there is only a single service
-  # of the required type, then that service is used.  If there are multiple services of the required type then the name of the argument's name is used.
-  # An exception is raised if a service was not able to be resolved.
-  #
-  # ## Examples
-  #
-  # ### Default Usage
-  #
-  # ```
-  # @[ADI::Register]
-  # class Store
-  #   include ADI::Service
-  #
-  #   property uuid : String = "UUID"
-  # end
-  #
-  # class MyNonService
-  #   include ADI::Injectable
-  #
-  #   getter store : Store
-  #
-  #   def initialize(@store : Store); end
-  # end
-  #
-  # MyNonService.new.store.uuid # => "UUID"
-  # ```
-  #
-  # ### Non Service Dependencies
-  #
-  # Named arguments take precedence.  This allows dependencies to be supplied explicitly without going through the resolving process; such as for testing.
-  # ```
-  # @[ADI::Register]
-  # class Store
-  #   include ADI::Service
-  #
-  #   property uuid : String = "UUID"
-  # end
-  #
-  # class MyNonService
-  #   include ADI::Injectable
-  #
-  #   getter store : Store
-  #   getter id : String
-  #
-  #   def initialize(@store : Store, @id : String); end
-  # end
-  #
-  # service = MyNonService.new(id: "FOO")
-  # service.store.uuid # => "UUID"
-  # service.id         # => "FOO"
-  # ```
-  module Injectable
-    macro included
-      macro finished
-        {% verbatim do %}
-          {% if initializer = @type.methods.find &.name.stringify.==("initialize") %}
-            # Auto generated via `ADI::Injectable` module.
-            def self.new(**args)
-              new(
-                {% for arg in initializer.args %}
-                  {{arg.name.id}}: args[{{arg.name.symbolize}}]? || ADI.container.resolve({{arg.restriction.id}}, {{arg.name.stringify}}),
-                {% end %}
-              )
-            end
-          {% end %}
-        {% end %}
-      end
-    end
-  end
 end
 
 # abstract class FakeServices
 # end
 
-# @[ADI::Register]
+# @[ADI::Register(alias: FakeServices)]
 # class FakeService < FakeServices
 #   include ADI::Service
 # end
 
-# @[ADI::Register(name: "custom_fake", alias: FakeServices)]
+# @[ADI::Register(name: "custom_fake")]
 # class CustomFooFakeService < FakeServices
 #   include ADI::Service
 # end
@@ -302,7 +228,7 @@ end
 #   def initialize(@blah : Blah?); end
 # end
 
-# @[ADI::Register(public: true)]
+# @[ADI::Register]
 # class Public
 #   include ADI::Service
 
@@ -311,7 +237,7 @@ end
 #   end
 # end
 
-# @[ADI::Register(lazy: true, public: true)]
+# @[ADI::Register(lazy: true)]
 # class Lazy
 #   include ADI::Service
 
@@ -341,6 +267,9 @@ end
 #   end
 # end
 
-# cont = ADI::ServiceContainer.new
+# CONTAINER = ADI::ServiceContainer.new
 
-# pp cont.get Public
+# pp CONTAINER.get FakeServices
+# pp CONTAINER.get CustomFooFakeService
+# pp CONTAINER.fake_services
+# pp CONTAINER.fake_service
