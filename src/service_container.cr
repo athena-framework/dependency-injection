@@ -20,7 +20,7 @@ struct Athena::DependencyInjection::ServiceContainer
   end
 
   private macro get_service_id(service, service_ann)
-    @type.stringify(service_ann && service_ann[:name] ? service_ann[:name] : service.name.split("::").last.underscore)
+    @type.stringify(service_ann && service_ann[:name] ? service_ann[:name] : service.name.gsub(/::/, "_").underscore)
   end
 
   private macro get_service_hash_value(service_id, service, service_ann, alias_hash)
