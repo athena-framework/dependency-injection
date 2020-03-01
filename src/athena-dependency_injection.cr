@@ -23,7 +23,15 @@ alias ADI = Athena::DependencyInjection
 # Using interfaces allows changing the functionality of a type by just changing what service gets injected into it.
 # See this [blog post](https://dev.to/blacksmoke16/dependency-injection-in-crystal-2d66#plug-and-play) for an example of this.
 module Athena::DependencyInjection
-  module CompilerPass; end
+  module CompilerPass
+    macro included
+      macro pre_process(service_hash, alias_hash)
+      end
+
+      macro post_process(service_hash, alias_hash)
+      end
+    end
+  end
 
   # Stores metadata associated with a specific service.
   #

@@ -20,15 +20,15 @@ struct Athena::DependencyInjection::ServiceContainer
   end
 
   private macro get_service_key(service, service_ann)
-    @type.stringify(service_ann[:name] ? service_ann[:name] : service.name.split("::").last.underscore)
+    @type.stringify(service_ann && service_ann[:name] ? service_ann[:name] : service.name.split("::").last.underscore)
   end
 
   private macro get_service_hash_value(key, service, service_ann, alias_hash)
-    if service_ann[:alias] != nil
+    if service_ann && service_ann[:alias] != nil
       alias_hash[service_ann[:alias].resolve] = key
     end
 
-    {lazy: service_ann[:lazy] || false, public: service_ann[:public] || false, tags: service_ann[:tags] || [] of Nil, type: service, service_annotation: service_ann}
+    {lazy: (service_ann && service_ann[:lazy]) || false, public: (service_ann && service_ann[:public]) || false, tags: (service_ann && service_ann[:tags]) || [] of Nil, type: service, service_annotation: service_ann}
   end
 
   private macro get_initializer_args(service)
@@ -39,7 +39,7 @@ struct Athena::DependencyInjection::ServiceContainer
   private macro resolve_dependencies(service_hash, alias_hash, service, service_ann)
     # If positional arguments are provided,
     # use them to instantiate the object
-    unless service_ann.args.empty?
+    if service_ann && !service_ann.args.empty?
       service_ann.args.map_with_index do |arg, idx|
        @type.parse_arg service_hash, service, arg, idx
       end
@@ -47,8 +47,8 @@ struct Athena::DependencyInjection::ServiceContainer
       # Otherwise, try and auto resolve the arguments
       @type.get_initializer_args(service).map_with_index do |arg, idx|
         # Check if an explicit value was passed for this arg
-        if named_arg = service_ann.named_args["_#{arg.name}"]
-          @type.parse_arg service_hash, service, named_arg, idx
+        if service_ann && service_ann.named_args.keys.includes? "_#{arg.name}".id
+          @type.parse_arg service_hash, service, service_ann.named_args["_#{arg.name}"], idx
         else
           resolved_services = [] of Nil
 
@@ -136,14 +136,19 @@ struct Athena::DependencyInjection::ServiceContainer
         {% end %}
       {% end %}
 
+      # Run pre process compiler pass
+      {% for pass in ADI::CompilerPass.includers %}
+        {% pass.pre_process service_hash, alias_hash %}
+      {% end %}
+
       # Resolve the arguments for each service
       {% for service_id, metadata in service_hash %}
         {% service_hash[service_id][:arguments] = @type.resolve_dependencies service_hash, alias_hash, metadata[:type], metadata[:service_annotation] %}
       {% end %}
 
-      # Run all the compiler passes
+      # Run post process compiler pass
       {% for pass in ADI::CompilerPass.includers %}
-        {% service_hash = pass.process service_hash, alias_hash %}
+        {% pass.post_process service_hash, alias_hash %}
       {% end %}
 
       {% for service_id, metadata in service_hash %}
