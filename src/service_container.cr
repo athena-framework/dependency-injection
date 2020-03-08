@@ -31,7 +31,7 @@ struct Athena::DependencyInjection::ServiceContainer
     {
       lazy: (service_ann && service_ann[:lazy]) || false,
       public: (service_ann && service_ann[:public]) || false,
-      alias_public: (service_ann && service_ann[:alias_public]) || false,
+      public_alias: (service_ann && service_ann[:public_alias]) || false,
       tags: (service_ann && service_ann[:tags]) || [] of Nil,
       type: service.resolve,
       service_annotation: service_ann
@@ -86,7 +86,7 @@ struct Athena::DependencyInjection::ServiceContainer
             # check the alias map for the restriction
             elsif aliased_service = alias_hash[arg.restriction.resolve]
               # If one is found returned the aliased service
-              aliased_service.id 
+              aliased_service.id
             else
               # Otherwise raise an exception
               arg.raise "Could not auto resolve argument #{arg}"
@@ -111,13 +111,9 @@ struct Athena::DependencyInjection::ServiceContainer
     elsif @type.is_optional_service arg
       service_id = arg[2..-1]
 
-      if s = service_hash[service_id]
-        "#{service_id.id}".id
-      else
-        nil
-      end
+      (s = service_hash[service_id]) ? service_id.id : nil
     elsif @type.is_service arg
-      "#{arg[1..-1].id}".id
+      arg[1..-1].id
     elsif @type.is_tagged_service arg
       %(#{@type.resolve_tags service_hash, arg[1..-1]} of Union(#{@type.get_initializer_args(service)[idx].restriction.resolve.type_vars.splat})).id
     else
@@ -158,8 +154,7 @@ struct Athena::DependencyInjection::ServiceContainer
         {% pass.post_process service_hash, alias_hash %}
       {% end %}
 
-      # Define a getter for the service, public if the service is public
-      # If the service is public, also define a getter to get it via type
+      # Define getters for each service, if the service is public, make the getter public and also define a type based getter
       {% for service_id, metadata in service_hash %}
         {% if metadata[:public] != true %}private{% end %} getter {{service_id.id}} : {{metadata[:type]}} { {{metadata[:type]}}.new({{metadata[:arguments].splat}}) }
 
@@ -170,14 +165,13 @@ struct Athena::DependencyInjection::ServiceContainer
         {% end %}
       {% end %}
 
-      # Also define a getter for public aliases
+      # Define getters for aliased service, if the alias is public, make the getter public and also define a type based getter
       {% for service_type, service_id in alias_hash %}
         {% service = service_hash[service_id] %}
-        {% if service[:alias_public] == true %}
-          def {{@type.get_service_key(service_type, nil).id}} : {{service[:type]}}
-            {{service_id.id}}
-          end
 
+        {% if service[:public_alias] != true %}private{% end %} def {{@type.get_service_id(service_type, nil).id}} : {{service[:type]}}; {{service_id.id}}; end
+
+        {% if service[:public_alias] == true %}
           def get(service : {{service_type}}.class) : {{service[:type]}}
             {{service_id.id}}
           end
@@ -191,7 +185,7 @@ struct Athena::DependencyInjection::ServiceContainer
 
         # Initialize non lazy services
         {% for service_id, metadata in service_hash %}
-          {% if metadata[:lazy] != true %}
+          {% unless metadata[:lazy] == true %}
             @{{service_id.id}} = {{service_id.id}}
           {% end %}
         {% end %}
