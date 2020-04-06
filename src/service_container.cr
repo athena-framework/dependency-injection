@@ -234,6 +234,8 @@ struct Athena::DependencyInjection::ServiceContainer
       {% for ivar in @type.instance_vars.reject(&.name.==("tags")) %}
         when {{ivar.name.stringify}} then {{ivar.id}}
       {% end %}
+      else
+        nil
       end
     {% end %}
   end
