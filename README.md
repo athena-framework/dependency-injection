@@ -1,7 +1,7 @@
 # Dependency Injection
 
-[![Build Status](https://img.shields.io/github/workflow/status/athena-framework/dependency-injection/CI)](https://github.com/athena-framework/dependency-injection/actions)
-[![Latest release](https://img.shields.io/github/release/athena-framework/dependency-injection.svg?style=flat-square)](https://github.com/athena-framework/dependency-injection/releases)
+[![CI](https://github.com/athena-framework/dependency-injection/workflows/CI/badge.svg)](https://github.com/athena-framework/dependency-injection/actions?query=workflow%3ACI)
+[![Latest release](https://img.shields.io/github/release/athena-framework/dependency-injection.svg)](https://github.com/athena-framework/dependency-injection/releases)
 
 Flexible instance based dependency injection service container library.
 
@@ -31,4 +31,4 @@ Everything is documented in the [API Docs](https://athena-framework.github.io/de
 
 ## Contributors
 
-- [Blacksmoke16](https://github.com/blacksmoke16) - creator and maintainer
+- [George Dietrich](https://github.com/blacksmoke16) - creator and maintainer
