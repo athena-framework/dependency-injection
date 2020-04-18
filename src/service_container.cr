@@ -18,23 +18,36 @@ struct Athena::DependencyInjection::ServiceContainer
       {% for service in Object.all_subclasses.select &.annotation(ADI::Register) %}
         {% if (annotations = service.annotations(ADI::Register)) && !annotations.empty? && !service.abstract? %}
           {% for ann in annotations %}
+            {% generics = (ann && ann[:generics]) || [] of Nil %}
             {% id_key = ((ann && ann[:name]) ? ann[:name] : service.name.gsub(/::/, "_").underscore) %}
             {% service_id = id_key.is_a?(StringLiteral) ? id_key : id_key.stringify %}
             {% tags = [] of Nil %}
+
+            {% if !service.type_vars.empty? && (ann && !ann[:name]) %}
+              {% raise "Services based on the generic type '#{service}' must explicitly provide a name." %}
+            {% end %}
+
+            {% if !service.type_vars.empty? && generics.empty? %}
+              {% raise "Service '#{service_id.id}' must provide the generic vars it should use via the 'generics' field." %}
+            {% end %}
+
+            {% if service.type_vars.size != generics.size %}
+              {% raise "Wrong number of generic arguments provided for '#{service_id.id}'.  Expected #{service.type_vars.size} got #{generics.size}." %}
+            {% end %}
 
             {% if ann && ann[:alias] != nil %}
               {% alias_hash[ann[:alias].resolve] = service_id %}
             {% end %}
 
             {% if ann && (ann_tags = ann[:tags]) %}
-              {% ann.raise "Tags must be an ArrayLiteral, not #{ann_tags.class_name.id}" unless ann_tags.is_a? ArrayLiteral %}
+              {% ann.raise "Tags for service `#{service_id.id}` must be an ArrayLiteral or TupleLiteral, not #{ann_tags.class_name.id}." unless ann_tags.is_a? ArrayLiteral %}
               {% tags = ann_tags.map do |tag|
                    if tag.is_a? StringLiteral
                      {name: tag}
                    elsif tag.is_a? Path
                      {name: tag.resolve}
                    elsif tag.is_a? NamedTupleLiteral
-                     tag.raise "A tag must have a name" unless tag[:name]
+                     tag.raise "Tags for service `#{service_id.id}` must must have a name." unless tag[:name]
 
                      # Resolve a constant to it's value
                      # if used as a tag name
@@ -44,19 +57,20 @@ struct Athena::DependencyInjection::ServiceContainer
 
                      tag
                    else
-                     tag.raise "A tag must be a StringLiteral or NamedTupleLiteral not #{tag.class_name.id}"
+                     tag.raise "Tags for service `#{service_id.id}` must be a StringLiteral or NamedTupleLiteral not #{tag.class_name.id}."
                    end
                  end %}
             {% end %}
 
               {%
                 service_hash[service_id] = {
+                  generics:           generics,
                   lazy:               (ann && ann[:lazy]) || false,
                   public:             (ann && ann[:public]) || false,
                   public_alias:       (ann && ann[:public_alias]) || false,
+                  service_annotation: ann,
                   tags:               tags,
                   type:               service.resolve,
-                  service_annotation: ann,
                 }
               %}
           {% end %}
@@ -81,7 +95,7 @@ struct Athena::DependencyInjection::ServiceContainer
                   inner_initializer_args = (i = initializer) ? i.args : [] of Nil
 
                   if arr_arg.is_a?(ArrayLiteral)
-                    arr_arg.raise "More than two level nested arrays are not currently supported"
+                    arr_arg.raise "More than two level nested arrays are not currently supported."
                   elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?("@?")
                     s_id = arr_arg[2..-1]
 
@@ -138,7 +152,7 @@ struct Athena::DependencyInjection::ServiceContainer
                     inner_initializer_args = (i = initializer) ? i.args : [] of Nil
 
                     if arr_arg.is_a?(ArrayLiteral)
-                      arr_arg.raise "More than two level nested arrays are not currently supported"
+                      arr_arg.raise "More than two level nested arrays are not currently supported."
                     elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?("@?")
                       s_id = arr_arg[2..-1]
 
@@ -184,7 +198,7 @@ struct Athena::DependencyInjection::ServiceContainer
 
                 # Otherwise resolve possible services based on type
                 service_hash.each do |s_id, metadata|
-                  if metadata[:type] <= arg.restriction.resolve
+                  if (type = arg.restriction.resolve?) && metadata[:type] <= type
                     resolved_services << s_id
                   end
                 end
@@ -196,7 +210,7 @@ struct Athena::DependencyInjection::ServiceContainer
                     arg.default_value
                   else
                     # otherwise raise an exception
-                    arg.raise "Could not auto resolve argument #{arg}.  Does it exist?"
+                    arg.raise "Could not auto resolve argument '#{arg}'.  Does it exist?"
                   end
                 elsif resolved_services.size == 1
                   # If only one was matched, return it
@@ -212,7 +226,7 @@ struct Athena::DependencyInjection::ServiceContainer
                     aliased_service.id
                   else
                     # Otherwise raise an exception
-                    arg.raise "Could not auto resolve argument #{arg}"
+                    arg.raise "Could not auto resolve argument '#{arg}'."
                   end
                 end
               end
@@ -225,10 +239,12 @@ struct Athena::DependencyInjection::ServiceContainer
 
       # Define getters for each service, if the service is public, make the getter public and also define a type based getter
       {% for service_id, metadata in service_hash %}
-        {% if metadata[:public] != true %}private{% end %} getter {{service_id.id}} : {{metadata[:type]}} { {{metadata[:type]}}.new({{metadata[:arguments].splat}}) }
+        {% type = metadata[:generics].empty? ? metadata[:type] : "#{metadata[:type].name(generic_args: false)}(#{metadata[:generics].splat})".id %}
+
+        {% if metadata[:public] != true %}private{% end %} getter {{service_id.id}} : {{type}} { {{type}}.new({{metadata[:arguments].splat}}) }
 
         {% if metadata[:public] %}
-          def get(service : {{metadata[:type]}}.class) : {{metadata[:type]}}
+          def get(service : {{type}}.class) : {{type}}
             {{service_id.id}}
           end
         {% end %}
@@ -236,12 +252,14 @@ struct Athena::DependencyInjection::ServiceContainer
 
       # Define getters for aliased service, if the alias is public, make the getter public and also define a type based getter
       {% for service_type, service_id in alias_hash %}
+        {% type = metadata[:generics].empty? ? metadata[:type] : "#{metadata[:type].name(generic_args: false)}(#{metadata[:generics].splat})".id %}
+
         {% service = service_hash[service_id] %}
 
-        {% if service[:public_alias] != true %}private{% end %} def {{service_type.name.gsub(/::/, "_").underscore.id}} : {{service[:type]}}; {{service_id.id}}; end
+        {% if service[:public_alias] != true %}private{% end %} def {{service_type.name.gsub(/::/, "_").underscore.id}} : {{type}}; {{service_id.id}}; end
 
         {% if service[:public_alias] %}
-          def get(service : {{service_type}}.class) : {{service[:type]}}
+          def get(service : {{type}}.class) : {{type}}
             {{service_id.id}}
           end
         {% end %}
@@ -251,6 +269,13 @@ struct Athena::DependencyInjection::ServiceContainer
       def initialize
         # Work around for https://github.com/crystal-lang/crystal/issues/7975
         {{@type}}
+
+        # Initialize non lazy services
+        {% for service_id, metadata in service_hash %}
+          {% unless metadata[:lazy] == true %}
+            @{{service_id.id}} = {{service_id.id}}
+          {% end %}
+        {% end %}
       end
     {% end %}
   end
