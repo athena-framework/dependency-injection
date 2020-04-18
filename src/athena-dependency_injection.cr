@@ -12,15 +12,14 @@ alias ADI = Athena::DependencyInjection
 # These objects live in a special struct called the `ADI::ServiceContainer` (SC).  Object instances can be retrieved from the container, or even injected directly into types as a form of constructor DI.
 #
 # The SC is lazily initialized on fibers; this allows the SC to be accessed anywhere within the project.  The `ADI.container` method will return the SC for the current fiber.
-# Since the SC is defined on fibers, it allows for each fiber to have its own SC.  This can be useful for web frameworks as each request would have its own SC scoped to that request.
+# Since the SC is defined on fibers, it allows for each fiber to have its own SC instance.  This can be useful for web frameworks as each request would have its own SC scoped to that request.
 # This however, is up to the each project to implement.
 #
 # * See `ADI::Register` for documentation on registering services.
 # * See `ADI::ServiceContainer` for documentation on working directly with the SC.
-# * See `ADI::Injectable` for documentation on auto injecting services into non service types.
 #
 # NOTE: It is highly recommended to use interfaces as opposed to concrete types when defining the initializers for both services and non-services.
-# Using interfaces allows changing the functionality of a type by just changing what service gets injected into it.
+# Using interfaces allows changing the functionality of a type by just changing what service gets injected into it, such as via an alias.
 # See this [blog post](https://dev.to/blacksmoke16/dependency-injection-in-crystal-2d66#plug-and-play) for an example of this.
 module Athena::DependencyInjection
   # Stores metadata associated with a specific service.
@@ -152,12 +151,11 @@ module Athena::DependencyInjection
   # end
   # ```
   annotation Register; end
-  annotation Inject; end
 
-  # Used to designate a type as a service.
+  # Can be applied to a constructor to mark that that method should be used for injection.
   #
-  # See `ADI::Register` for more details.
-  module Service; end
+  # The main use case for this is if a type has multiple constructors.  Otherwise, the first construtor would be used.
+  annotation Inject; end
 
   # Returns the `ADI::ServiceContainer` for the current fiber.
   def self.container : ADI::ServiceContainer

@@ -20,9 +20,33 @@ struct Athena::DependencyInjection::ServiceContainer
           {% for ann in annotations %}
             {% id_key = ((ann && ann[:name]) ? ann[:name] : service.name.gsub(/::/, "_").underscore) %}
             {% service_id = id_key.is_a?(StringLiteral) ? id_key : id_key.stringify %}
+            {% tags = [] of Nil %}
 
             {% if ann && ann[:alias] != nil %}
               {% alias_hash[ann[:alias].resolve] = service_id %}
+            {% end %}
+
+            {% if ann && (ann_tags = ann[:tags]) %}
+              {% ann.raise "Tags must be an ArrayLiteral, not #{ann_tags.class_name.id}" unless ann_tags.is_a? ArrayLiteral %}
+              {% tags = ann_tags.map do |tag|
+                   if tag.is_a? StringLiteral
+                     {name: tag}
+                   elsif tag.is_a? Path
+                     {name: tag.resolve}
+                   elsif tag.is_a? NamedTupleLiteral
+                     tag.raise "A tag must have a name" unless tag[:name]
+
+                     # Resolve a constant to it's value
+                     # if used as a tag name
+                     if tag[:name].is_a? Path
+                       tag[:name] = tag[:name].resolve
+                     end
+
+                     tag
+                   else
+                     tag.raise "A tag must be a StringLiteral or NamedTupleLiteral not #{tag.class_name.id}"
+                   end
+                 end %}
             {% end %}
 
               {%
@@ -30,7 +54,7 @@ struct Athena::DependencyInjection::ServiceContainer
                   lazy:               (ann && ann[:lazy]) || false,
                   public:             (ann && ann[:public]) || false,
                   public_alias:       (ann && ann[:public_alias]) || false,
-                  tags:               (ann && ann[:tags]) || [] of Nil,
+                  tags:               tags,
                   type:               service.resolve,
                   service_annotation: ann,
                 }
@@ -63,17 +87,9 @@ struct Athena::DependencyInjection::ServiceContainer
 
                     (s = service_hash[s_id]) ? s_id.id : nil
                   elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?('@')
-                    arr_arg[1..-1].id
-                  elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?('!')
-                    inner_tag = arg[1..-1]
-
-                    inner_tagged_services = [] of Nil
-                    service_hash.each do |s_id, metadata|
-                      tagged_services << s_id.id if metadata[:tags].includes? arg[1..-1]
-                    end
-                    inner_tagged_services
-
-                    %(#{inner_tagged_services} of Union(#{initializer_args[arr_idx].restriction.resolve.type_vars.splat})).id
+                    service_name = arr_arg[1..-1]
+                    raise "Failed to resolve service '#{service_name.id}'.  Does it exist?" unless service_hash[service_name]
+                    service_name.id
                   else
                     arr_arg
                   end
@@ -85,17 +101,24 @@ struct Athena::DependencyInjection::ServiceContainer
 
                 (s = service_hash[s_id]) ? s_id.id : nil
               elsif arg.is_a?(StringLiteral) && arg.starts_with?('@')
-                arg[1..-1].id
+                service_name = arg[1..-1]
+                raise "Failed to resolve service '#{service_name.id}'.  Does it exist?" unless service_hash[service_name]
+                service_name.id
               elsif arg.is_a?(StringLiteral) && arg.starts_with?('!')
-                tag = arg[1..-1]
-
                 tagged_services = [] of Nil
-                service_hash.each do |s_id, metadata|
-                  tagged_services << s_id.id if metadata[:tags].includes? arg[1..-1]
-                end
-                tagged_services
 
-                %(#{tagged_services} of Union(#{initializer_args[idx].restriction.resolve.type_vars.splat})).id
+                # Build an array of services with the given tag,
+                # along with the tag metadata
+                service_hash.each do |s_id, metadata|
+                  if t = metadata[:tags].find { |tag| tag[:name] == arg[1..-1] }
+                    tagged_services << {s_id.id, t}
+                  end
+                end
+
+                # Sort based on tag priority.  Services without a priority will be last in order of definition
+                tagged_services = tagged_services.sort_by { |item| -(item[1][:priority] || 0) }
+
+                %(#{tagged_services.map(&.first)} of Union(#{initializer_args[idx].restriction.resolve.type_vars.splat})).id
               else
                 arg
               end
@@ -121,17 +144,9 @@ struct Athena::DependencyInjection::ServiceContainer
 
                       (s = service_hash[s_id]) ? s_id.id : nil
                     elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?('@')
-                      arr_arg[1..-1].id
-                    elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?('!')
-                      inner_tag = arg[1..-1]
-
-                      inner_tagged_services = [] of Nil
-                      service_hash.each do |s_id, metadata|
-                        tagged_services << s_id.id if metadata[:tags].includes? arg[1..-1]
-                      end
-                      inner_tagged_services
-
-                      %(#{inner_tagged_services} of Union(#{initializer_args[arr_idx].restriction.resolve.type_vars.splat})).id
+                      service_name = arr_arg[1..-1]
+                      raise "Failed to resolve service '#{service_name.id}'.  Does it exist?" unless service_hash[service_name]
+                      service_name.id
                     else
                       arr_arg
                     end
@@ -143,17 +158,24 @@ struct Athena::DependencyInjection::ServiceContainer
 
                   (s = service_hash[s_id]) ? s_id.id : nil
                 elsif named_arg.is_a?(StringLiteral) && named_arg.starts_with?('@')
-                  named_arg[1..-1].id
+                  service_name = named_arg[1..-1]
+                  raise "Failed to resolve service '#{service_name.id}'.  Does it exist?" unless service_hash[service_name]
+                  service_name.id
                 elsif named_arg.is_a?(StringLiteral) && named_arg.starts_with?('!')
-                  tag = named_arg[1..-1]
-
                   tagged_services = [] of Nil
-                  service_hash.each do |s_id, metadata|
-                    tagged_services << s_id.id if metadata[:tags].includes? named_arg[1..-1]
-                  end
-                  tagged_services
 
-                  %(#{tagged_services} of Union(#{initializer_args[idx].restriction.resolve.type_vars.splat})).id
+                  # Build an array of services with the given tag,
+                  # along with the tag metadata
+                  service_hash.each do |s_id, metadata|
+                    if t = metadata[:tags].find { |tag| tag[:name] == named_arg[1..-1] }
+                      tagged_services << {s_id.id, t}
+                    end
+                  end
+
+                  # Sort based on tag priority.  Services without a priority will be last in order of definition
+                  tagged_services = tagged_services.sort_by { |item| -(item[1][:priority] || 0) }
+
+                  %(#{tagged_services.map(&.first)} of Union(#{initializer_args[idx].restriction.resolve.type_vars.splat})).id
                 else
                   named_arg
                 end
@@ -174,7 +196,7 @@ struct Athena::DependencyInjection::ServiceContainer
                     arg.default_value
                   else
                     # otherwise raise an exception
-                    arg.raise "Could not auto resolve argument #{arg}"
+                    arg.raise "Could not auto resolve argument #{arg}.  Does it exist?"
                   end
                 elsif resolved_services.size == 1
                   # If only one was matched, return it
@@ -218,7 +240,7 @@ struct Athena::DependencyInjection::ServiceContainer
 
         {% if service[:public_alias] != true %}private{% end %} def {{service_type.name.gsub(/::/, "_").underscore.id}} : {{service[:type]}}; {{service_id.id}}; end
 
-        {% if service[:public_alias] == true %}
+        {% if service[:public_alias] %}
           def get(service : {{service_type}}.class) : {{service[:type]}}
             {{service_id.id}}
           end
@@ -227,7 +249,7 @@ struct Athena::DependencyInjection::ServiceContainer
 
       # Initializes the container.  Auto registering annotated services.
       def initialize
-        # Work around for https://github.com/crystal-lang/crystal/issues/7975.
+        # Work around for https://github.com/crystal-lang/crystal/issues/7975
         {{@type}}
       end
     {% end %}
