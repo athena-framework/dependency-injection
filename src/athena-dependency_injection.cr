@@ -23,16 +23,6 @@ alias ADI = Athena::DependencyInjection
 # Using interfaces allows changing the functionality of a type by just changing what service gets injected into it.
 # See this [blog post](https://dev.to/blacksmoke16/dependency-injection-in-crystal-2d66#plug-and-play) for an example of this.
 module Athena::DependencyInjection
-  module CompilerPass
-    macro included
-      macro pre_process(service_hash, alias_hash)
-      end
-
-      macro post_process(service_hash, alias_hash)
-      end
-    end
-  end
-
   # Stores metadata associated with a specific service.
   #
   # The type of the service affects how it behaves within the container.  When a `struct` service is retrieved or injected into a type, it will be a copy of the one in the SC (passed by value).
@@ -175,103 +165,56 @@ module Athena::DependencyInjection
   end
 end
 
-abstract class FakeServices
+# An interface that could have multiple implementations
+module SomeInterface
 end
 
 @[ADI::Register]
-class FakeService < FakeServices
-  include ADI::Service
+class FakeService
+  include SomeInterface
 end
 
-@[ADI::Register(name: "custom_fake", alias: FakeServices)]
-class CustomFooFakeService < FakeServices
-  include ADI::Service
+# Allow aliasing a specific interface to a given service
+@[ADI::Register(name: "custom_fake", alias: SomeInterface)]
+class CustomFooFakeService
+  include SomeInterface
 end
 
+# Auto resolves based on an interface but supply explicit arg
 @[ADI::Register(_name: "JIM")]
 class Bar
-  include ADI::Service
-
-  def initialize(@asdf : FakeServices, @name : String); end
+  def initialize(@asdf : SomeInterface, @name : String); end
 end
 
+# Auto resolves based on type
 @[ADI::Register]
 class FooBar
-  include ADI::Service
-
   def initialize(@obj : Foo); end
 end
 
+# Scalar arguments
 @[ADI::Register(1, "fred", false)]
 class Foo
-  include ADI::Service
-
   def initialize(@id : Int32, @name : String, @active : Bool); end
 end
 
-@[ADI::Register]
-class Blah
-  include ADI::Service
-end
-
-@[ADI::Register(decorates: "blah")]
-class BlahDecorator
-  include ADI::Service
-
-  def initialize(@blah : Blah); end
-end
-
-@[ADI::Register("@?blah")]
-class Baz
-  include ADI::Service
-
-  def initialize(@blah : Blah?); end
-end
-
-@[ADI::Register]
-class Athena::RoutingStuff::Public
-  include ADI::Service
-
-  def initialize
-    # pp "new public"
-  end
-end
-
-@[ADI::Register(lazy: true)]
-class Lazy
-  include ADI::Service
-
-  def initialize
-    # pp "new lazy"
-  end
-end
-
+# Multiple services based on same class
 @[ADI::Register("GOOGLE", "Google", name: "google", tags: ["feed_partner", "partner"])]
 @[ADI::Register("FACEBOOK", "Facebook", name: "facebook", tags: ["partner"])]
 struct FeedPartner
-  include ADI::Service
-
   getter id : String
   getter name : String
 
   def initialize(@id : String, @name : String); end
 end
 
+# Resolve all services with the given tag
 @[ADI::Register("!partner")]
 class PartnerManager
-  include ADI::Service
-
   getter partners
 
   def initialize(@partners : Array(FeedPartner))
   end
-end
-
-@[ADI::Register("@fake_services")]
-class Test
-  include ADI::Service
-
-  def initialize(@t : FakeServices); end
 end
 
 CONTAINER = ADI::ServiceContainer.new
