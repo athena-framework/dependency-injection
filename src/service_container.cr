@@ -24,15 +24,15 @@ struct Athena::DependencyInjection::ServiceContainer
             {% tags = [] of Nil %}
 
             {% if !service.type_vars.empty? && (ann && !ann[:name]) %}
-              {% raise "Services based on the generic type '#{service}' must explicitly provide a name." %}
+              {% raise "Failed to register service '#{service}'.  Generic services must explicitly provide a name." %}
             {% end %}
 
             {% if !service.type_vars.empty? && generics.empty? %}
-              {% raise "Service '#{service_id.id}' must provide the generic vars it should use via the 'generics' field." %}
+              {% raise "Failed to register service '#{service_id.id}'.  Generic services must provide the types to use via the 'generics' field." %}
             {% end %}
 
             {% if service.type_vars.size != generics.size %}
-              {% raise "Wrong number of generic arguments provided for '#{service_id.id}'.  Expected #{service.type_vars.size} got #{generics.size}." %}
+              {% raise "Failed to register service '#{service_id.id}'.  Expected #{service.type_vars.size} generics types got #{generics.size}." %}
             {% end %}
 
             {% if ann && ann[:alias] != nil %}
@@ -40,24 +40,23 @@ struct Athena::DependencyInjection::ServiceContainer
             {% end %}
 
             {% if ann && (ann_tags = ann[:tags]) %}
-              {% ann.raise "Tags for service `#{service_id.id}` must be an ArrayLiteral or TupleLiteral, not #{ann_tags.class_name.id}." unless ann_tags.is_a? ArrayLiteral %}
+              {% ann.raise "Failed to register service `#{service_id.id}`.  Tags must be an ArrayLiteral or TupleLiteral, not #{ann_tags.class_name.id}." unless ann_tags.is_a? ArrayLiteral %}
               {% tags = ann_tags.map do |tag|
                    if tag.is_a? StringLiteral
                      {name: tag}
                    elsif tag.is_a? Path
                      {name: tag.resolve}
                    elsif tag.is_a? NamedTupleLiteral
-                     tag.raise "Tags for service `#{service_id.id}` must must have a name." unless tag[:name]
+                     tag.raise "Failed to register service `#{service_id.id}`.  All tags must have a name." unless tag[:name]
 
-                     # Resolve a constant to it's value
-                     # if used as a tag name
+                     # Resolve a constant to its value if used as a tag name
                      if tag[:name].is_a? Path
                        tag[:name] = tag[:name].resolve
                      end
 
                      tag
                    else
-                     tag.raise "Tags for service `#{service_id.id}` must be a StringLiteral or NamedTupleLiteral not #{tag.class_name.id}."
+                     tag.raise "Failed to register service `#{service_id.id}`.  A tag must be a StringLiteral or NamedTupleLiteral not #{tag.class_name.id}."
                    end
                  end %}
             {% end %}
@@ -89,34 +88,33 @@ struct Athena::DependencyInjection::ServiceContainer
         {% if service_ann && !service_ann.args.empty? %}
           {%
             arguments = service_ann.args.map_with_index do |arg, idx|
+              initializer_arg = initializer_args[idx]
+
               if arg.is_a?(ArrayLiteral)
                 inner_args = arg.map_with_index do |arr_arg, arr_idx|
-                  inner_initializer = service.methods.find(&.annotation(ADI::Inject)) || service.methods.find(&.name.==("initialize"))
-                  inner_initializer_args = (i = initializer) ? i.args : [] of Nil
-
                   if arr_arg.is_a?(ArrayLiteral)
-                    arr_arg.raise "More than two level nested arrays are not currently supported."
+                    arr_arg.raise "Failed to register service '#{service_id.id}'.  Arrays more than two levels deep are not currently supported."
                   elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?("@?")
                     s_id = arr_arg[2..-1]
 
                     (s = service_hash[s_id]) ? s_id.id : nil
                   elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?('@')
                     service_name = arr_arg[1..-1]
-                    raise "Failed to resolve service '#{service_name.id}'.  Does it exist?" unless service_hash[service_name]
+                    raise "Failed to register service '#{service_name.id}'.  Could not resolve argument '#{initializer_arg}' from '#{arr_arg.id}'." unless service_hash[service_name]
                     service_name.id
                   else
                     arr_arg
                   end
                 end
 
-                %(#{inner_args} of Union(#{initializer_args[idx].restriction.resolve.type_vars.splat})).id
+                %(#{inner_args} of Union(#{initializer_arg.restriction.resolve.type_vars.splat})).id
               elsif arg.is_a?(StringLiteral) && arg.starts_with?("@?")
                 s_id = arg[2..-1]
 
                 (s = service_hash[s_id]) ? s_id.id : nil
               elsif arg.is_a?(StringLiteral) && arg.starts_with?('@')
                 service_name = arg[1..-1]
-                raise "Failed to resolve service '#{service_name.id}'.  Does it exist?" unless service_hash[service_name]
+                raise "Failed to register service '#{service_name.id}'.  Could not resolve argument '#{initializer_arg}' from '#{arg.id}'." unless service_hash[service_name]
                 service_name.id
               elsif arg.is_a?(StringLiteral) && arg.starts_with?('!')
                 tagged_services = [] of Nil
@@ -132,7 +130,7 @@ struct Athena::DependencyInjection::ServiceContainer
                 # Sort based on tag priority.  Services without a priority will be last in order of definition
                 tagged_services = tagged_services.sort_by { |item| -(item[1][:priority] || 0) }
 
-                %(#{tagged_services.map(&.first)} of Union(#{initializer_args[idx].restriction.resolve.type_vars.splat})).id
+                %(#{tagged_services.map(&.first)} of Union(#{initializer_arg.restriction.resolve.type_vars.splat})).id
               elsif arg.is_a?(Path)
                 resolved_services = [] of Nil
 
@@ -146,27 +144,27 @@ struct Athena::DependencyInjection::ServiceContainer
                 # If no services could be resolved
                 if resolved_services.size == 0
                   # Return a default value if any
-                  unless arg.default_value.is_a? Nop
-                    arg.default_value
+                  unless initializer_arg.default_value.is_a? Nop
+                    initializer_arg.default_value
                   else
                     # otherwise raise an exception
-                    arg.raise "Could not auto resolve argument '#{arg}'.  Does it exist?"
+                    initializer_arg.raise "Failed to register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}' from '#{arg.id}'."
                   end
                 elsif resolved_services.size == 1
                   # If only one was matched, return it
                   resolved_services[0].id
                 else
                   # Otherwise fallback on the argument's name as well
-                  if resolved_service = resolved_services.find(&.==(arg.name))
+                  if resolved_service = resolved_services.find(&.==(initializer_arg.name))
                     resolved_service.id
                     # If no service with that name could be resolved,
                     # check the alias map for the restriction
-                  elsif aliased_service = alias_hash[arg.restriction.resolve]
+                  elsif aliased_service = alias_hash[initializer_arg.restriction.resolve]
                     # If one is found returned the aliased service
                     aliased_service.id
                   else
                     # Otherwise raise an exception
-                    arg.raise "Could not auto resolve argument '#{arg}'."
+                    initializer_arg.raise "Failed to register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}' from '#{arg.id}'."
                   end
                 end
               else
@@ -183,19 +181,19 @@ struct Athena::DependencyInjection::ServiceContainer
                 named_arg = service_ann.named_args["_#{initializer_arg.name}"]
 
                 if named_arg.is_a?(ArrayLiteral)
-                  inner_args = initializer_arg.map_with_index do |arr_arg, arr_idx|
+                  inner_args = named_arg.map_with_index do |arr_arg, arr_idx|
                     inner_initializer = service.methods.find(&.annotation(ADI::Inject)) || service.methods.find(&.name.==("initialize"))
                     inner_initializer_args = (i = initializer) ? i.args : [] of Nil
 
                     if arr_arg.is_a?(ArrayLiteral)
-                      arr_arg.raise "More than two level nested arrays are not currently supported."
+                      arr_arg.raise "Failed to register service '#{service_id.id}'.  Arrays more than two levels deep are not currently supported."
                     elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?("@?")
                       s_id = arr_arg[2..-1]
 
                       (s = service_hash[s_id]) ? s_id.id : nil
                     elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?('@')
                       service_name = arr_arg[1..-1]
-                      raise "Failed to resolve service '#{service_name.id}'.  Does it exist?" unless service_hash[service_name]
+                      raise "Failed to register service '#{service_name.id}'.  Could not resolve argument '#{initializer_arg}' from '#{arr_arg.id}'." unless service_hash[service_name]
                       service_name.id
                     elsif arr_arg.is_a?(Path)
                       resolved_services = [] of Nil
@@ -214,7 +212,7 @@ struct Athena::DependencyInjection::ServiceContainer
                           initializer_arg.default_value
                         else
                           # otherwise raise an exception
-                          initializer_arg.raise "Could not auto resolve argument '#{initializer_arg}'.  Does it exist?"
+                          initializer_arg.raise "Failed to auto register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}'."
                         end
                       elsif resolved_services.size == 1
                         # If only one was matched, return it
@@ -230,7 +228,7 @@ struct Athena::DependencyInjection::ServiceContainer
                           aliased_service.id
                         else
                           # Otherwise raise an exception
-                          initializer_arg.raise "Could not auto resolve argument '#{initializer_arg}'."
+                          initializer_arg.raise "Failed to auto register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}'."
                         end
                       end
                     else
@@ -245,7 +243,7 @@ struct Athena::DependencyInjection::ServiceContainer
                   (s = service_hash[s_id]) ? s_id.id : nil
                 elsif named_arg.is_a?(StringLiteral) && named_arg.starts_with?('@')
                   service_name = named_arg[1..-1]
-                  raise "Failed to resolve service '#{service_name.id}'.  Does it exist?" unless service_hash[service_name]
+                  raise "Failed to register service '#{service_name.id}'.  Could not resolve argument '#{initializer_arg}' from '#{named_arg.id}'." unless service_hash[service_name]
                   service_name.id
                 elsif named_arg.is_a?(StringLiteral) && named_arg.starts_with?('!')
                   tagged_services = [] of Nil
@@ -279,7 +277,7 @@ struct Athena::DependencyInjection::ServiceContainer
                       initializer_arg.default_value
                     else
                       # otherwise raise an exception
-                      initializer_arg.raise "Could not auto resolve argument '#{initializer_arg}' with explicit argument '#{named_arg}'.  Does it exist?"
+                      initializer_arg.raise "Failed to register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}' from '#{named_arg.id}'."
                     end
                   elsif resolved_services.size == 1
                     # If only one was matched, return it
@@ -295,7 +293,7 @@ struct Athena::DependencyInjection::ServiceContainer
                       aliased_service.id
                     else
                       # Otherwise raise an exception
-                      initializer_arg.raise "Could not auto resolve argument '#{initializer_arg}' with explicit argument '#{named_arg}'."
+                      initializer_arg.raise "Failed to register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}' from '#{named_arg.id}'."
                     end
                   end
                 else
@@ -318,7 +316,7 @@ struct Athena::DependencyInjection::ServiceContainer
                     initializer_arg.default_value
                   else
                     # otherwise raise an exception
-                    initializer_arg.raise "Could not auto resolve argument '#{initializer_arg}'.  Does it exist?"
+                    initializer_arg.raise "Failed to auto register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}'."
                   end
                 elsif resolved_services.size == 1
                   # If only one was matched, return it
@@ -334,7 +332,7 @@ struct Athena::DependencyInjection::ServiceContainer
                     aliased_service.id
                   else
                     # Otherwise raise an exception
-                    initializer_arg.raise "Could not auto resolve argument '#{initializer_arg}'."
+                    initializer_arg.raise "Failed to auto register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}'."
                   end
                 end
               end
@@ -377,6 +375,13 @@ struct Athena::DependencyInjection::ServiceContainer
       def initialize
         # Work around for https://github.com/crystal-lang/crystal/issues/7975
         {{@type}}
+
+        # Initialize non lazy services  
+        {% for service_id, metadata in service_hash %}  
+          {% unless metadata[:lazy] == true %}  
+            @{{service_id.id}} = {{service_id.id}}  
+          {% end %} 
+        {% end %}
       end
     {% end %}
   end
