@@ -19,7 +19,7 @@ struct Athena::DependencyInjection::ServiceContainer
         {% if (annotations = service.annotations(ADI::Register)) && !annotations.empty? && !service.abstract? %}
           {% for ann in annotations %}
             {% generics = ann.args %}
-            {% id_key = ann[:name] || service.name.gsub(/::/, "_").underscore) %}
+            {% id_key = ann[:name] || service.name.gsub(/::/, "_").underscore %}
             {% service_id = id_key.is_a?(StringLiteral) ? id_key : id_key.stringify %}
             {% tags = [] of Nil %}
 
@@ -94,9 +94,6 @@ struct Athena::DependencyInjection::ServiceContainer
 
               if named_arg.is_a?(ArrayLiteral)
                 inner_args = named_arg.map_with_index do |arr_arg, arr_idx|
-                  inner_initializer = service.methods.find(&.annotation(ADI::Inject)) || service.methods.find(&.name.==("initialize"))
-                  inner_initializer_args = (i = initializer) ? i.args : [] of Nil
-
                   if arr_arg.is_a?(ArrayLiteral)
                     arr_arg.raise "Failed to register service '#{service_id.id}'.  Arrays more than two levels deep are not currently supported."
                   elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?("@?")
@@ -107,48 +104,12 @@ struct Athena::DependencyInjection::ServiceContainer
                     service_name = arr_arg[1..-1]
                     raise "Failed to register service '#{service_name.id}'.  Could not resolve argument '#{initializer_arg}' from '#{arr_arg.id}'." unless service_hash[service_name]
                     service_name.id
-                  elsif arr_arg.is_a?(Path)
-                    resolved_services = [] of Nil
-
-                    # Otherwise resolve possible services based on type
-                    service_hash.each do |s_id, metadata|
-                      if (type = arr_arg.resolve?) && metadata[:type] <= type
-                        resolved_services << s_id
-                      end
-                    end
-
-                    # If no services could be resolved
-                    if resolved_services.size == 0
-                      # Return a default value if any
-                      unless initializer_arg.default_value.is_a? Nop
-                        initializer_arg.default_value
-                      else
-                        # otherwise raise an exception
-                        initializer_arg.raise "Failed to auto register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}'."
-                      end
-                    elsif resolved_services.size == 1
-                      # If only one was matched, return it
-                      resolved_services[0].id
-                    else
-                      # Otherwise fallback on the argument's name as well
-                      if resolved_service = resolved_services.find(&.==(initializer_arg.name))
-                        resolved_service.id
-                        # If no service with that name could be resolved,
-                        # check the alias map for the restriction
-                      elsif aliased_service = alias_hash[initializer_arg.restriction.resolve]
-                        # If one is found returned the aliased service
-                        aliased_service.id
-                      else
-                        # Otherwise raise an exception
-                        initializer_arg.raise "Failed to auto register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}'."
-                      end
-                    end
                   else
                     arr_arg
                   end
                 end
 
-                %(#{inner_args} of Union(#{initializer_args[idx].restriction.resolve.type_vars.splat})).id
+                %(#{inner_args} of Union(#{initializer_arg.restriction.resolve.type_vars.splat})).id
               elsif named_arg.is_a?(StringLiteral) && named_arg.starts_with?("@?")
                 s_id = named_arg[2..-1]
 
@@ -172,42 +133,6 @@ struct Athena::DependencyInjection::ServiceContainer
                 tagged_services = tagged_services.sort_by { |item| -(item[1][:priority] || 0) }
 
                 %(#{tagged_services.map(&.first)} of Union(#{initializer_args[idx].restriction.resolve.type_vars.splat})).id
-              elsif named_arg.is_a?(Path)
-                resolved_services = [] of Nil
-
-                # Otherwise resolve possible services based on type
-                service_hash.each do |s_id, metadata|
-                  if (type = named_arg.resolve?) && metadata[:type] <= type
-                    resolved_services << s_id
-                  end
-                end
-
-                # If no services could be resolved
-                if resolved_services.size == 0
-                  # Return a default value if any
-                  unless initializer_arg.default_value.is_a? Nop
-                    initializer_arg.default_value
-                  else
-                    # otherwise raise an exception
-                    initializer_arg.raise "Failed to register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}' from '#{named_arg.id}'."
-                  end
-                elsif resolved_services.size == 1
-                  # If only one was matched, return it
-                  resolved_services[0].id
-                else
-                  # Otherwise fallback on the argument's name as well
-                  if resolved_service = resolved_services.find(&.==(initializer_arg.name))
-                    resolved_service.id
-                    # If no service with that name could be resolved,
-                    # check the alias map for the restriction
-                  elsif aliased_service = alias_hash[initializer_arg.restriction.resolve]
-                    # If one is found returned the aliased service
-                    aliased_service.id
-                  else
-                    # Otherwise raise an exception
-                    initializer_arg.raise "Failed to register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}' from '#{named_arg.id}'."
-                  end
-                end
               else
                 named_arg
               end
@@ -224,8 +149,10 @@ struct Athena::DependencyInjection::ServiceContainer
               # If no services could be resolved
               if resolved_services.size == 0
                 # Return a default value if any
-                unless initializer_arg.default_value.is_a? Nop
+                if !initializer_arg.default_value.is_a? Nop
                   initializer_arg.default_value
+                elsif initializer_arg.restriction.resolve.nilable?
+                  nil
                 else
                   # otherwise raise an exception
                   initializer_arg.raise "Failed to auto register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}'."

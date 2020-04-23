@@ -263,3 +263,12 @@ end
 # end
 
 # ADI.container.client.call "foo bar"
+# class MissingService
+# end
+
+# @[ADI::Register]
+# class Klass
+#   def initialize(@service : MissingService); end
+# end
+
+# pp ADI::ServiceContainer.new
