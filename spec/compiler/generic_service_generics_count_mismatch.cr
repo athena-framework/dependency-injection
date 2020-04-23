@@ -1,6 +1,6 @@
 require "../spec_helper"
 
-@[ADI::Register(name: "generic_service", generics: [Int32])]
+@[ADI::Register(Int32, name: "generic_service")]
 class GenericService(A, B)
   def initialize(@value : B); end
 end

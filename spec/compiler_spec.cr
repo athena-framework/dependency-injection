@@ -22,16 +22,6 @@ private TEST_CASES = {
     "Failed to register service 'klass'.  Could not resolve argument 'service : MissingService' from 'MissingService'.",
   },
   {
-    # The provided service does not exist
-    "cannot_register_missing_service",
-    "Failed to register service 'missing_service'.  Could not resolve argument 'service : MissingService' from '@missing_service'.",
-  },
-  {
-    # A service of the provided type could not be resolved
-    "cannot_register_missing_service_type",
-    "Failed to register service 'klass'.  Could not resolve argument 'service : MissingService' from 'MissingService'.",
-  },
-  {
     # Service based on type that has multiple generic arguments does not provide the correct amount of generic arguments
     "generic_service_generics_count_mismatch",
     "Failed to register service 'generic_service'.  Expected 2 generics types got 1.",
@@ -49,11 +39,6 @@ private TEST_CASES = {
   {
     # A named argument is an array more than 2 levels deep
     "nested_array_named_argument",
-    "Failed to register service 'klass'.  Arrays more than two levels deep are not currently supported.",
-  },
-  {
-    # A positional argument is an array more than 2 levels deep
-    "nested_array_positional_argument",
     "Failed to register service 'klass'.  Arrays more than two levels deep are not currently supported.",
   },
   {
@@ -76,7 +61,6 @@ private TEST_CASES = {
     "tagged_service_name_not_provided",
     "Failed to register service `tagged_service`.  All tags must have a name.",
   },
-
 }
 
 describe Athena::DependencyInjection do
