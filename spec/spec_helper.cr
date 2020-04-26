@@ -1,5 +1,6 @@
 require "spec"
 require "../src/athena-dependency_injection"
+require "./service_mocks"
 
 CONTAINER = ADI::ServiceContainer.new
 

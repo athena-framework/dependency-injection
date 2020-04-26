@@ -18,7 +18,10 @@ struct Athena::DependencyInjection::ServiceContainer
       {% for service in Object.all_subclasses.select &.annotation(ADI::Register) %}
         {% if (annotations = service.annotations(ADI::Register)) && !annotations.empty? && !service.abstract? %}
           {% for ann in annotations %}
+            # If positional arguments are provided, use them as generic arguments
             {% generics = ann.args %}
+
+            # Use the service name defined within the annotation, otherwise fallback on FQN snake cased
             {% id_key = ann[:name] || service.name.gsub(/::/, "_").underscore %}
             {% service_id = id_key.is_a?(StringLiteral) ? id_key : id_key.stringify %}
             {% tags = [] of Nil %}
@@ -64,7 +67,7 @@ struct Athena::DependencyInjection::ServiceContainer
               {%
                 service_hash[service_id] = {
                   generics:           generics,
-                  lazy:               (ann && ann[:lazy]) || false,
+                  lazy:               (ann && ann[:lazy]) || true,
                   public:             (ann && ann[:public]) || false,
                   public_alias:       (ann && ann[:public_alias]) || false,
                   service_annotation: ann,
@@ -83,9 +86,6 @@ struct Athena::DependencyInjection::ServiceContainer
         {% initializer = service.methods.find(&.annotation(ADI::Inject)) || service.methods.find(&.name.==("initialize")) %}
         {% initializer_args = (i = initializer) ? i.args : [] of Nil %}
 
-        # If positional arguments are provided,
-        # use them to instantiate the object
-        # Otherwise, try and auto resolve the arguments
         {%
           arguments = initializer_args.map_with_index do |initializer_arg, idx|
             # Check if an explicit value was passed for this initializer_arg
@@ -98,7 +98,6 @@ struct Athena::DependencyInjection::ServiceContainer
                     arr_arg.raise "Failed to register service '#{service_id.id}'.  Arrays more than two levels deep are not currently supported."
                   elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?("@?")
                     s_id = arr_arg[2..-1]
-
                     (s = service_hash[s_id]) ? s_id.id : nil
                   elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?('@')
                     service_name = arr_arg[1..-1]
@@ -112,7 +111,6 @@ struct Athena::DependencyInjection::ServiceContainer
                 %(#{inner_args} of Union(#{initializer_arg.restriction.resolve.type_vars.splat})).id
               elsif named_arg.is_a?(StringLiteral) && named_arg.starts_with?("@?")
                 s_id = named_arg[2..-1]
-
                 (s = service_hash[s_id]) ? s_id.id : nil
               elsif named_arg.is_a?(StringLiteral) && named_arg.starts_with?('@')
                 service_name = named_arg[1..-1]
