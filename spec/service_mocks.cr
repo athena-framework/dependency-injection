@@ -13,11 +13,11 @@ end
 class MyApp::Models::Foo
 end
 
-@[ADI::Register(_service_explicit: "@my_app_models_foo", public: true)]
+@[ADI::Register(public: true)]
 class NamespaceClient
-  getter service, service_explicit
+  getter service
 
-  def initialize(@service : MyApp::Models::Foo, @service_explicit : MyApp::Models::Foo); end
+  def initialize(@service : MyApp::Models::Foo); end
 end
 
 ###############
@@ -69,15 +69,6 @@ class TransformerAliasNameClient
   end
 end
 
-@[ADI::Register(_transformer: "@shout_transformer", public: true)]
-class TransformerAliasExplicitNameClient
-  getter service
-
-  def initialize(transformer : TransformerInterface)
-    @service = transformer
-  end
-end
-
 ####################
 # OPTIONAL SERVICE #
 ####################
@@ -90,17 +81,6 @@ end
 
 @[ADI::Register(public: true)]
 class OptionalClient
-  getter service_missing, service_existing, service_default
-
-  def initialize(
-    @service_missing : OptionalMissingService?,
-    @service_existing : OptionalExistingService?,
-    @service_default : OptionalMissingService | Int32 | Nil = 12
-  ); end
-end
-
-@[ADI::Register(_service_missing: "@?optional_missing_service", _service_existing: "@?optional_existing_service", service_default: "@?optional_missing_service", public: true)]
-class OptionalClientExplicitName
   getter service_missing, service_existing, service_default
 
   def initialize(
@@ -146,7 +126,12 @@ struct ArrayService
   include ArrayInterface
 end
 
-@[ADI::Register(_services: ["@array_service", "@?array_service", "@?array_service_missing"], public: true)]
+@[ADI::Register]
+struct API::Models::NestedArrayService
+  include ArrayInterface
+end
+
+@[ADI::Register(_services: ["@array_service", "@?array_service", "@?array_service_missing", "@api_models_nested_array_service"], public: true)]
 struct ArrayClient
   getter services
 

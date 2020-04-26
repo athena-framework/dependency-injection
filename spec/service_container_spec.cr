@@ -9,16 +9,8 @@ describe Athena::DependencyInjection::ServiceContainer do
     end
 
     describe "that is namespaced" do
-      describe "auto registration" do
-        it "correctly resolves the service" do
-          ADI.container.namespace_client.service.should be_a MyApp::Models::Foo
-        end
-      end
-
-      describe "explicit service" do
-        it "uses the FQN as the default service ID" do
-          ADI.container.namespace_client.service_explicit.should be_a MyApp::Models::Foo
-        end
+      it "correctly resolves the service" do
+        ADI.container.namespace_client.service.should be_a MyApp::Models::Foo
       end
     end
 
@@ -34,56 +26,26 @@ describe Athena::DependencyInjection::ServiceContainer do
           ADI.container.transformer_alias_name_client.service.should be_a ShoutTransformer
         end
       end
-
-      describe "explicit service provided" do
-        it "should inject the service whose ID matches the provided ID" do
-          ADI.container.transformer_alias_explicit_name_client.service.should be_a ShoutTransformer
-        end
-      end
     end
 
     describe "where a dependency is optional" do
       describe "and does not exist" do
-        describe "auto registering" do
-          describe "without a default value" do
-            it "should inject `nil`" do
-              ADI.container.optional_client.service_missing.should be_nil
-            end
-          end
-
-          describe "with a default value" do
-            it "should inject the default" do
-              ADI.container.optional_client.service_default.should eq 12
-            end
+        describe "without a default value" do
+          it "should inject `nil`" do
+            ADI.container.optional_client.service_missing.should be_nil
           end
         end
 
-        describe "with an explicit service" do
-          describe "without a default value" do
-            it "should inject `nil`" do
-              ADI.container.optional_client_explicit_name.service_missing.should be_nil
-            end
-          end
-
-          describe "with a default value" do
-            it "should inject the default" do
-              ADI.container.optional_client_explicit_name.service_default.should eq 12
-            end
+        describe "with a default value" do
+          it "should inject the default" do
+            ADI.container.optional_client.service_default.should eq 12
           end
         end
       end
 
       describe "and does exist" do
-        describe "with an explicit service" do
-          it "should inject that service" do
-            ADI.container.optional_client_explicit_name.service_existing.should be_a OptionalExistingService
-          end
-        end
-
-        describe "auto registering" do
-          it "should inject that service" do
-            ADI.container.optional_client.service_existing.should be_a OptionalExistingService
-          end
+        it "should inject that service" do
+          ADI.container.optional_client.service_existing.should be_a OptionalExistingService
         end
       end
     end
@@ -110,6 +72,7 @@ describe Athena::DependencyInjection::ServiceContainer do
         services[0].should be_a ArrayService
         services[1].should be_a ArrayService
         services[2].should be_nil
+        services[3].should be_a API::Models::NestedArrayService
       end
     end
 

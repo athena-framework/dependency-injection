@@ -1,9 +1,8 @@
 # Where the instantiated services live.
 #
-# A getter is defined for each service, if it is public.
-# Otherwise, services are only available via constructor DI.
+# If a service is public, a getter based on the service's name as well as its type is defined.  Otherwise, services are only available via constructor DI.
 #
-# TODO: Reduce the amount of duplication when https://github.com/crystal-lang/crystal/pull/9091 is released.
+# TODO: Reduce the amount of duplication when [this issue](https://github.com/crystal-lang/crystal/pull/9091) is resolved.
 struct Athena::DependencyInjection::ServiceContainer
   macro finished
     {% begin %}
@@ -67,9 +66,9 @@ struct Athena::DependencyInjection::ServiceContainer
               {%
                 service_hash[service_id] = {
                   generics:           generics,
-                  lazy:               (ann && ann[:lazy]) || true,
-                  public:             (ann && ann[:public]) || false,
-                  public_alias:       (ann && ann[:public_alias]) || false,
+                  lazy:               ann[:lazy] != nil ? ann[:lazy] : true,
+                  public:             ann[:public] != nil ? ann[:public] : false,
+                  public_alias:       ann[:public_alias] != nil ? ann[:public_alias] : false,
                   service_annotation: ann,
                   tags:               tags,
                   type:               service.resolve,
@@ -109,13 +108,6 @@ struct Athena::DependencyInjection::ServiceContainer
                 end
 
                 %(#{inner_args} of Union(#{initializer_arg.restriction.resolve.type_vars.splat})).id
-              elsif named_arg.is_a?(StringLiteral) && named_arg.starts_with?("@?")
-                s_id = named_arg[2..-1]
-                (s = service_hash[s_id]) ? s_id.id : nil
-              elsif named_arg.is_a?(StringLiteral) && named_arg.starts_with?('@')
-                service_name = named_arg[1..-1]
-                raise "Failed to register service '#{service_name.id}'.  Could not resolve argument '#{initializer_arg}' from '#{named_arg.id}'." unless service_hash[service_name]
-                service_name.id
               elsif named_arg.is_a?(StringLiteral) && named_arg.starts_with?('!')
                 tagged_services = [] of Nil
 

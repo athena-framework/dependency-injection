@@ -12,11 +12,6 @@ private TEST_CASES = {
     "Failed to auto register service 'klass'.  Could not resolve argument 'service : MissingService'.",
   },
   {
-    # An explicit argument references a service that hasn't been registered
-    "cannot_register_explicit_argument",
-    "Failed to register service 'missing_service'.  Could not resolve argument 'service : MissingService' from '@missing_service'.",
-  },
-  {
     # Service based on type that has multiple generic arguments does not provide the correct amount of generic arguments
     "generic_service_generics_count_mismatch",
     "Failed to register service 'generic_service'.  Expected 2 generics types got 1.",
