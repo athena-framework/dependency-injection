@@ -117,10 +117,6 @@ end
 module ArrayInterface
 end
 
-struct ArrayServiceMissing
-  include ArrayInterface
-end
-
 @[ADI::Register]
 struct ArrayService
   include ArrayInterface
@@ -131,7 +127,7 @@ struct API::Models::NestedArrayService
   include ArrayInterface
 end
 
-@[ADI::Register(_services: ["@array_service", "@?array_service", "@?array_service_missing", "@api_models_nested_array_service"], public: true)]
+@[ADI::Register(_services: ["@array_service", "@api_models_nested_array_service"], public: true)]
 struct ArrayClient
   getter services
 

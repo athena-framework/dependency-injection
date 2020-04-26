@@ -70,9 +70,7 @@ describe Athena::DependencyInjection::ServiceContainer do
       it "passes them to the constructor" do
         services = ADI.container.array_client.services
         services[0].should be_a ArrayService
-        services[1].should be_a ArrayService
-        services[2].should be_nil
-        services[3].should be_a API::Models::NestedArrayService
+        services[1].should be_a API::Models::NestedArrayService
       end
     end
 

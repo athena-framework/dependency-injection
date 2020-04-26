@@ -98,9 +98,6 @@ struct Athena::DependencyInjection::ServiceContainer
                 inner_args = named_arg.map do |arr_arg|
                   if arr_arg.is_a?(ArrayLiteral)
                     arr_arg.raise "Failed to register service '#{service_id.id}'.  Arrays more than two levels deep are not currently supported."
-                  elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?("@?")
-                    s_id = arr_arg[2..-1]
-                    (s = service_hash[s_id]) ? s_id.id : nil
                   elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?('@')
                     service_name = arr_arg[1..-1]
                     raise "Failed to register service '#{service_name.id}'.  Could not resolve argument '#{initializer_arg}' from '#{arr_arg.id}'." unless service_hash[service_name]
