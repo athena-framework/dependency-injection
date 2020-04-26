@@ -16,6 +16,11 @@ struct Athena::DependencyInjection::ServiceContainer
       # Register each service in the hash along with some related metadata.
       {% for service in Object.all_subclasses.select &.annotation(ADI::Register) %}
         {% if (annotations = service.annotations(ADI::Register)) && !annotations.empty? && !service.abstract? %}
+          # Raise a compile time exception if multiple services are based on this type, and not all of them specify a `name`.
+          {% if annotations.size > 1 && !annotations.all? &.[:name] %}
+            {% service.raise "Failed to register services for '#{service}'.  Services based on this type must each explicitly provide a name." %}
+          {% end %}
+
           {% for ann in annotations %}
             # If positional arguments are provided, use them as generic arguments
             {% generics = ann.args %}
@@ -26,21 +31,21 @@ struct Athena::DependencyInjection::ServiceContainer
             {% tags = [] of Nil %}
 
             {% if !service.type_vars.empty? && (ann && !ann[:name]) %}
-              {% raise "Failed to register service '#{service}'.  Generic services must explicitly provide a name." %}
+              {% service.raise "Failed to register services for '#{service}'.  Generic services must explicitly provide a name." %}
             {% end %}
 
             {% if !service.type_vars.empty? && generics.empty? %}
-              {% raise "Failed to register service '#{service_id.id}'.  Generic services must provide the types to use via the 'generics' field." %}
+              {% service.raise "Failed to register service '#{service_id.id}'.  Generic services must provide the types to use via the 'generics' field." %}
             {% end %}
 
             {% if service.type_vars.size != generics.size %}
-              {% raise "Failed to register service '#{service_id.id}'.  Expected #{service.type_vars.size} generics types got #{generics.size}." %}
+              {% service.raise "Failed to register service '#{service_id.id}'.  Expected #{service.type_vars.size} generics types got #{generics.size}." %}
             {% end %}
 
             {% if ann && ann[:alias] != nil %}
               {% alias_type = ann[:alias].resolve %}
 
-              {% raise "Failed to register service '#{service_id.id}'.  '#{alias_type}' is already aliased to '#{alias_hash[alias_type].id}'." if alias_hash[alias_type] %}
+              {% service.raise "Failed to register service '#{service_id.id}'.  '#{alias_type}' is already aliased to '#{alias_hash[alias_type].id}'." if alias_hash[alias_type] %}
               {% alias_hash[alias_type] = service_id %}
             {% end %}
 

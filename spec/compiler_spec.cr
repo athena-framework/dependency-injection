@@ -29,7 +29,12 @@ private TEST_CASES = {
   {
     # Service based on generic type does not explicitly provide a name
     "generic_service_name_not_provided",
-    "Failed to register service 'GenericService(T)'.  Generic services must explicitly provide a name.",
+    "Failed to register services for 'GenericService(T)'.  Generic services must explicitly provide a name.",
+  },
+  {
+    # Multiple services are based on a type, but not all provide a name
+    "multiple_services_on_type_missing_name",
+    "Failed to register services for 'Klass'.  Services based on this type must each explicitly provide a name.",
   },
   {
     # A named argument is an array more than 2 levels deep

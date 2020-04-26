@@ -139,14 +139,14 @@ end
 ##################
 private PARTNER_TAG = "partner"
 
-@[ADI::Register(_id: 1, _name: "Google", name: "google", tags: [{name: PARTNER_TAG, priority: 5}])]
-@[ADI::Register(_id: 2, _name: "Facebook", name: "facebook", tags: [PARTNER_TAG])]
-@[ADI::Register(_id: 3, _name: "Yahoo", name: "yahoo", tags: [{name: "partner", priority: 10}])]
-@[ADI::Register(_id: 4, _name: "Microsoft", name: "microsoft", tags: [PARTNER_TAG])]
+@[ADI::Register(_id: 1, name: "google", tags: [{name: PARTNER_TAG, priority: 5}])]
+@[ADI::Register(_id: 2, name: "facebook", tags: [PARTNER_TAG])]
+@[ADI::Register(_id: 3, name: "yahoo", tags: [{name: "partner", priority: 10}])]
+@[ADI::Register(_id: 4, name: "microsoft", tags: [PARTNER_TAG])]
 struct FeedPartner
   getter id
 
-  def initialize(@id : Int32, @name : String); end
+  def initialize(@id : Int32); end
 end
 
 @[ADI::Register(_services: "!partner", public: true)]
