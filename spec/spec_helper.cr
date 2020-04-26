@@ -2,8 +2,6 @@ require "spec"
 require "../src/athena-dependency_injection"
 require "./service_mocks"
 
-CONTAINER = ADI::ServiceContainer.new
-
 # Asserts compile time errors given a *path* to a program and a *message*.
 def assert_error(path : String, message : String) : Nil
   buffer = IO::Memory.new

@@ -81,11 +81,11 @@ end
 ####################
 # OPTIONAL SERVICE #
 ####################
-struct MissingService
+struct OptionalMissingService
 end
 
 @[ADI::Register]
-struct ExistingService
+struct OptionalExistingService
 end
 
 @[ADI::Register(public: true)]
@@ -93,20 +93,20 @@ class OptionalClient
   getter service_missing, service_existing, service_default
 
   def initialize(
-    @service_missing : MissingService?,
-    @service_existing : ExistingService?,
-    @service_default : MissingService | Int32 | Nil = 12
+    @service_missing : OptionalMissingService?,
+    @service_existing : OptionalExistingService?,
+    @service_default : OptionalMissingService | Int32 | Nil = 12
   ); end
 end
 
-@[ADI::Register(_service_missing: "@?missing_service", _service_existing: "@?existing_service", service_default: "@?missing_service", public: true)]
+@[ADI::Register(_service_missing: "@?optional_missing_service", _service_existing: "@?optional_existing_service", service_default: "@?optional_missing_service", public: true)]
 class OptionalClientExplicitName
   getter service_missing, service_existing, service_default
 
   def initialize(
-    @service_missing : MissingService?,
-    @service_existing : ExistingService?,
-    @service_default : MissingService | Int32 | Nil = 12
+    @service_missing : OptionalMissingService?,
+    @service_existing : OptionalExistingService?,
+    @service_default : OptionalMissingService | Int32 | Nil = 12
   ); end
 end
 
@@ -115,7 +115,7 @@ end
 ###################
 @[ADI::Register(Int32, Bool, public: true, name: "int_service")]
 @[ADI::Register(Float64, Bool, public: true, name: "float_service")]
-struct GenericService(T, B)
+struct GenericServiceBase(T, B)
   def type
     {T, B}
   end

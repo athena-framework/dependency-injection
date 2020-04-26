@@ -1,6 +1,6 @@
 require "./spec_helper"
 
-describe Athena::DependencyInjection::ServiceContainer, focus: true do
+describe Athena::DependencyInjection::ServiceContainer do
   describe "registration" do
     describe "that resolves to a single type" do
       it "should inject that type" do
@@ -76,13 +76,13 @@ describe Athena::DependencyInjection::ServiceContainer, focus: true do
       describe "and does exist" do
         describe "with an explicit service" do
           it "should inject that service" do
-            ADI.container.optional_client_explicit_name.service_existing.should be_a ExistingService
+            ADI.container.optional_client_explicit_name.service_existing.should be_a OptionalExistingService
           end
         end
 
         describe "auto registering" do
           it "should inject that service" do
-            ADI.container.optional_client.service_existing.should be_a ExistingService
+            ADI.container.optional_client.service_existing.should be_a OptionalExistingService
           end
         end
       end

@@ -93,7 +93,7 @@ struct Athena::DependencyInjection::ServiceContainer
               named_arg = service_ann.named_args["_#{initializer_arg.name}"]
 
               if named_arg.is_a?(ArrayLiteral)
-                inner_args = named_arg.map_with_index do |arr_arg, arr_idx|
+                inner_args = named_arg.map do |arr_arg|
                   if arr_arg.is_a?(ArrayLiteral)
                     arr_arg.raise "Failed to register service '#{service_id.id}'.  Arrays more than two levels deep are not currently supported."
                   elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?("@?")
@@ -121,9 +121,9 @@ struct Athena::DependencyInjection::ServiceContainer
 
                 # Build an array of services with the given tag,
                 # along with the tag metadata
-                service_hash.each do |s_id, metadata|
-                  if t = metadata[:tags].find { |tag| tag[:name] == named_arg[1..-1] }
-                    tagged_services << {s_id.id, t}
+                service_hash.each do |id, s_metadata|
+                  if t = s_metadata[:tags].find { |tag| tag[:name] == named_arg[1..-1] }
+                    tagged_services << {id.id, t}
                   end
                 end
 
@@ -138,9 +138,9 @@ struct Athena::DependencyInjection::ServiceContainer
               resolved_services = [] of Nil
 
               # Otherwise resolve possible services based on type
-              service_hash.each do |s_id, metadata|
-                if (type = initializer_arg.restriction.resolve?) && metadata[:type] <= type
-                  resolved_services << s_id
+              service_hash.each do |id, s_metadata|
+                if (type = initializer_arg.restriction.resolve?) && s_metadata[:type] <= type
+                  resolved_services << id
                 end
               end
 
@@ -212,11 +212,11 @@ struct Athena::DependencyInjection::ServiceContainer
         # Work around for https://github.com/crystal-lang/crystal/issues/7975
         {{@type}}
 
-        # Initialize non lazy services  
-        {% for service_id, metadata in service_hash %}  
-          {% unless metadata[:lazy] == true %}  
-            @{{service_id.id}} = {{service_id.id}}  
-          {% end %} 
+        # Initialize non lazy services
+        {% for service_id, metadata in service_hash %}
+          {% unless metadata[:lazy] == true %}
+            @{{service_id.id}} = {{service_id.id}}
+          {% end %}
         {% end %}
       end
     {% end %}
