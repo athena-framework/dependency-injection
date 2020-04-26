@@ -38,7 +38,10 @@ struct Athena::DependencyInjection::ServiceContainer
             {% end %}
 
             {% if ann && ann[:alias] != nil %}
-              {% alias_hash[ann[:alias].resolve] = service_id %}
+              {% alias_type = ann[:alias].resolve %}
+
+              {% raise "Failed to register service '#{service_id.id}'.  '#{alias_type}' is already aliased to '#{alias_hash[alias_type].id}'." if alias_hash[alias_type] %}
+              {% alias_hash[alias_type] = service_id %}
             {% end %}
 
             {% if ann_tags = ann[:tags] %}
