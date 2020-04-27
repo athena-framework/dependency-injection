@@ -3,7 +3,7 @@
 # If a service is public, a getter based on the service's name as well as its type is defined.  Otherwise, services are only available via constructor DI.
 #
 # TODO: Reduce the amount of duplication when [this issue](https://github.com/crystal-lang/crystal/pull/9091) is resolved.
-struct Athena::DependencyInjection::ServiceContainer
+class Athena::DependencyInjection::ServiceContainer
   macro finished
     {% begin %}
       # Define a hash to store services while the container is being built

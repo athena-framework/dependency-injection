@@ -9,7 +9,7 @@ end
 alias ADI = Athena::DependencyInjection
 
 # Athena's Dependency Injection (DI) component, `ADI` for short, adds a service container layer to your project.  This useful objects, aka services, to be shared throughout the project.
-# These objects live in a special struct called the `ADI::ServiceContainer` (SC).
+# These objects live in a special class called the `ADI::ServiceContainer` (SC).
 #
 # The SC is lazily initialized on fibers; this allows the SC to be accessed anywhere within the project.  The `Athena::DependencyInjection.container` method will return the SC for the current fiber.
 # Since the SC is defined on fibers, it allows for each fiber to have its own SC instance.  This can be useful for web frameworks as each request would have its own SC scoped to that request.
