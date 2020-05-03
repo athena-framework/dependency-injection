@@ -2,11 +2,6 @@ require "./spec_helper"
 
 private TEST_CASES = {
   {
-    # A service is trying to define an alias
-    "already_aliased_type",
-    "Failed to register service 'two'.  'AliasInterface' is already aliased to 'one'.",
-  },
-  {
     # More than one service of a given type exist, but ivar name doesn't match any, nor is an alias defined
     "cannot_auto_register_multiple_candidates",
     "Failed to auto register service 'klass'.  Could not resolve argument 'service : Interface'.",

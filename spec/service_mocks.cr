@@ -69,6 +69,22 @@ class TransformerAliasNameClient
   end
 end
 
+######################
+# OVERRIDING ALIASES #
+######################
+module ConverterInterface
+end
+
+@[ADI::Register(alias: ConverterInterface)]
+struct ConverterOne
+  include ConverterInterface
+end
+
+@[ADI::Register(alias: ConverterInterface, public_alias: true)]
+struct ConverterTwo
+  include ConverterInterface
+end
+
 ####################
 # OPTIONAL SERVICE #
 ####################

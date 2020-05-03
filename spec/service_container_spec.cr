@@ -19,6 +19,10 @@ describe Athena::DependencyInjection::ServiceContainer do
         it "should inject the aliased service based on interface" do
           ADI.container.transformer_alias_client.service.should be_a ReverseTransformer
         end
+
+        it "allows overriding aliases" do
+          ADI.container.get(ConverterInterface).should be_a ConverterTwo
+        end
       end
 
       describe "variable name matches a service" do

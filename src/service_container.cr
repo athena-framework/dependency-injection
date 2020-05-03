@@ -43,10 +43,7 @@ class Athena::DependencyInjection::ServiceContainer
             {% end %}
 
             {% if ann && ann[:alias] != nil %}
-              {% alias_type = ann[:alias].resolve %}
-
-              {% service.raise "Failed to register service '#{service_id.id}'.  '#{alias_type}' is already aliased to '#{alias_hash[alias_type].id}'." if alias_hash[alias_type] %}
-              {% alias_hash[alias_type] = service_id %}
+              {% alias_hash[ann[:alias].resolve] = service_id %}
             {% end %}
 
             {% if ann_tags = ann[:tags] %}
@@ -198,7 +195,7 @@ class Athena::DependencyInjection::ServiceContainer
         {% if metadata[:public_alias] != true %}private{% end %} def {{service_type.name.gsub(/::/, "_").underscore.id}} : {{type}}; {{service_id.id}}; end
 
         {% if metadata[:public_alias] %}
-          def get(service : {{type}}.class) : {{type}}
+          def get(service : {{service_type}}.class) : {{service_type}}
             {{service_id.id}}
           end
         {% end %}
