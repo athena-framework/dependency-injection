@@ -94,6 +94,7 @@ describe Athena::DependencyInjection::ServiceContainer do
         service.api_key.should eq "123ABC"
         service.config.should eq({id: 12_i64, active: true})
         service.odd_values.should eq [ValueService.new(1), ValueService.new(3)]
+        service.prime_values.should eq [ValueService.new(2), ValueService.new(3)]
       end
     end
   end

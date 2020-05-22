@@ -176,11 +176,13 @@ end
 ############
 # BINDINGS #
 ############
+private PRIME_VALUE = "prime_value"
+
 module ValueInterface; end
 
 @[ADI::Register(_value: 1, name: "value_one")]
-@[ADI::Register(_value: 2, name: "value_two")]
-@[ADI::Register(_value: 3, name: "value_three")]
+@[ADI::Register(_value: 2, name: "value_two", tags: [PRIME_VALUE])]
+@[ADI::Register(_value: 3, name: "value_three", tags: [PRIME_VALUE])]
 record ValueService, value : Int32 do
   include ValueInterface
 end
@@ -188,9 +190,11 @@ end
 ADI.bind api_key, "123ABC"
 ADI.bind config, {id: 12_i64, active: true}
 ADI.bind odd_values, ["@value_one", "@value_three"]
+ADI.bind prime_values, "!prime_value"
 
 @[ADI::Register(public: true)]
 record BindingClient,
   api_key : String,
   config : NamedTuple(id: Int64, active: Bool),
-  odd_values : Array(ValueInterface)
+  odd_values : Array(ValueInterface),
+  prime_values : Array(ValueInterface)

@@ -59,7 +59,7 @@ module Athena::DependencyInjection
   macro bind(key, value)
     {% name = key.id.stringify %}
 
-    {% BINDINGS[name] = {value: value, name: name} %}
+    {% BINDINGS[name] = value %}
   end
 
   # Registers a service based on the type the annotation is applied to.

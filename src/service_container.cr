@@ -128,14 +128,14 @@ class Athena::DependencyInjection::ServiceContainer
               else
                 named_arg
               end
-            elsif binding = BINDINGS[initializer_arg.name.stringify]
-              if binding[:value].is_a?(ArrayLiteral)
-                inner_binding_args = binding[:value].map do |arr_arg|
+            elsif binding_value = BINDINGS[initializer_arg.name.stringify]
+              if binding_value.is_a?(ArrayLiteral)
+                inner_binding_args = binding_value.map do |arr_arg|
                   if arr_arg.is_a?(ArrayLiteral)
                     arr_arg.raise "Failed to register service '#{service_id.id}'.  Arrays more than two levels deep are not currently supported."
                   elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?('@')
                     service_name = arr_arg[1..-1]
-                    raise "Failed to register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}' from binding '#{binding[:name]}'." unless service_hash[service_name]
+                    raise "Failed to register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}' from binding '#{initializer_arg.name}'." unless service_hash[service_name]
                     service_name.id
                   else
                     arr_arg
@@ -143,8 +143,23 @@ class Athena::DependencyInjection::ServiceContainer
                 end
 
                 %(#{inner_binding_args} of Union(#{initializer_arg.restriction.resolve.type_vars.splat})).id
+              elsif binding_value.is_a?(StringLiteral) && binding_value.starts_with?('!')
+                tagged_services = [] of Nil
+
+                # Build an array of services with the given tag,
+                # along with the tag metadata
+                service_hash.each do |id, s_metadata|
+                  if t = s_metadata[:tags].find { |tag| tag[:name] == binding_value[1..-1] }
+                    tagged_services << {id.id, t}
+                  end
+                end
+
+                # Sort based on tag priority.  Services without a priority will be last in order of definition
+                tagged_services = tagged_services.sort_by { |item| -(item[1][:priority] || 0) }
+
+                %(#{tagged_services.map(&.first)} of Union(#{initializer_args[idx].restriction.resolve.type_vars.splat})).id
               else
-                binding[:value]
+                binding_value
               end
             else
               resolved_services = [] of Nil
