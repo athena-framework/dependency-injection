@@ -102,7 +102,7 @@ class Athena::DependencyInjection::ServiceContainer
                     arr_arg.raise "Failed to register service '#{service_id.id}'.  Arrays more than two levels deep are not currently supported."
                   elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?('@')
                     service_name = arr_arg[1..-1]
-                    raise "Failed to register service '#{service_name.id}'.  Could not resolve argument '#{initializer_arg}' from '#{arr_arg.id}'." unless service_hash[service_name]
+                    raise "Failed to register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}' from named argument value '#{named_arg}'." unless service_hash[service_name]
                     service_name.id
                   else
                     arr_arg
@@ -135,7 +135,7 @@ class Athena::DependencyInjection::ServiceContainer
                     arr_arg.raise "Failed to register service '#{service_id.id}'.  Arrays more than two levels deep are not currently supported."
                   elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?('@')
                     service_name = arr_arg[1..-1]
-                    raise "Failed to register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}' from binding '#{initializer_arg.name}'." unless service_hash[service_name]
+                    raise "Failed to register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}' from binding value '#{binding_value}'." unless service_hash[service_name]
                     service_name.id
                   else
                     arr_arg

@@ -2,6 +2,16 @@ require "./spec_helper"
 
 private TEST_CASES = {
   {
+    # A named argument is an array with a service reference that doesnt exist
+    "array_named_argument_missing",
+    "Failed to register service 'klass'.  Could not resolve argument 'values : Array(Foo)' from named argument value '[\"@foo\"]'.",
+  },
+  {
+    # A binding value is an array with a service reference that doesnt exist
+    "binding_array_argument_missing",
+    "Failed to register service 'klass'.  Could not resolve argument 'values : Array(Foo)' from binding value '[\"@foo\"]'.",
+  },
+  {
     # More than one service of a given type exist, but ivar name doesn't match any, nor is an alias defined
     "cannot_auto_register_multiple_candidates",
     "Failed to auto register service 'klass'.  Could not resolve argument 'service : Interface'.",
