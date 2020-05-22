@@ -20,6 +20,48 @@ alias ADI = Athena::DependencyInjection
 # Using interfaces allows changing the functionality of a type by just changing what service gets injected into it, such as via an alias.
 # See this [blog post](https://dev.to/blacksmoke16/dependency-injection-in-crystal-2d66#plug-and-play) for an example of this.
 module Athena::DependencyInjection
+  private BINDINGS = {} of Nil => Nil
+
+  # Allows binding a *value* to a *key* in order to enable auto registration of that value.
+  #
+  # Bindings allow scalar values, or those that could not otherwise be handled via [service aliases](./DependencyInjection/Register.html#aliasing-services), to be auto registered.
+  # This allows those arguments to be defined once and reused, as opposed to using named arguments to manually specify them for each service.
+  #
+  # ```
+  # module ValueInterface; end
+  #
+  # @[ADI::Register(_value: 1, name: "value_one")]
+  # @[ADI::Register(_value: 2, name: "value_two")]
+  # @[ADI::Register(_value: 3, name: "value_three")]
+  # record ValueService, value : Int32 do
+  #   include ValueInterface
+  # end
+  #
+  # ADI.bind api_key, ENV["API_KEY"]
+  # ADI.bind config, {id: 12_i64, active: true}
+  # ADI.bind static_value, 123
+  # ADI.bind odd_values, ["@value_one", "@value_three"]
+  #
+  # @[ADI::Register(public: true)]
+  # record BindingClient,
+  #   api_key : String,
+  #   config : NamedTuple(id: Int64, active: Bool),
+  #   static_value : Int32,
+  #   odd_values : Array(ValueInterface)
+  #
+  # ADI.container.binding_client # =>
+  # # BindingClient(
+  # #  @api_key="123ABC",
+  # #  @config={id: 12, active: true},
+  # #  @static_value=123,
+  # #  @odd_values=[ValueService(@value=1), ValueService(@value=3)])
+  # ```
+  macro bind(key, value)
+    {% name = key.id.stringify %}
+
+    {% BINDINGS[name] = {value: value, name: name} %}
+  end
+
   # Registers a service based on the type the annotation is applied to.
   #
   # The type of the service affects how it behaves within the container.  When a `struct` service is retrieved or injected into a type, it will be a copy of the one in the SC (passed by value).
@@ -172,6 +214,8 @@ module Athena::DependencyInjection
   #
   # ADI.container.array_client # => ArrayClient(@services=[One(), Three()])
   # ```
+  #
+  # While scalar arguments cannot be auto registered by default, the `ADI.bind` macro can be used to support it.
   #
   # ### Tagging Services
   # Services can also be tagged.  Service tags allows another service to have all services with a specific tag injected as a dependency.

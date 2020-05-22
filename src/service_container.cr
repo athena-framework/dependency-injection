@@ -128,6 +128,24 @@ class Athena::DependencyInjection::ServiceContainer
               else
                 named_arg
               end
+            elsif binding = BINDINGS[initializer_arg.name.stringify]
+              if binding[:value].is_a?(ArrayLiteral)
+                inner_binding_args = binding[:value].map do |arr_arg|
+                  if arr_arg.is_a?(ArrayLiteral)
+                    arr_arg.raise "Failed to register service '#{service_id.id}'.  Arrays more than two levels deep are not currently supported."
+                  elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?('@')
+                    service_name = arr_arg[1..-1]
+                    raise "Failed to register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}' from binding '#{binding[:name]}'." unless service_hash[service_name]
+                    service_name.id
+                  else
+                    arr_arg
+                  end
+                end
+
+                %(#{inner_binding_args} of Union(#{initializer_arg.restriction.resolve.type_vars.splat})).id
+              else
+                binding[:value]
+              end
             else
               resolved_services = [] of Nil
 
