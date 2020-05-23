@@ -2,12 +2,12 @@ require "./spec_helper"
 
 private TEST_CASES = {
   {
-    # A named argument is an array with a service reference that doesnt exist
+    # A named argument is an array with a service reference that doesn't exist
     "array_named_argument_missing",
     "Failed to register service 'klass'.  Could not resolve argument 'values : Array(Foo)' from named argument value '[\"@foo\"]'.",
   },
   {
-    # A binding value is an array with a service reference that doesnt exist
+    # A binding value is an array with a service reference that doesn't exist
     "binding_array_argument_missing",
     "Failed to register service 'klass'.  Could not resolve argument 'values : Array(Foo)' from binding value '[\"@foo\"]'.",
   },
@@ -27,7 +27,7 @@ private TEST_CASES = {
     "Failed to register service 'generic_service'.  Expected 2 generics types got 1.",
   },
   {
-    # Service based on generic type does provide any generic arguments
+    # Service based on generic type does not provide any generic arguments
     "generic_service_generics_not_provided",
     "Failed to register service 'generic_service'.  Generic services must provide the types to use via the 'generics' field.",
   },
