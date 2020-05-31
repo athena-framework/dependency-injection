@@ -187,6 +187,8 @@ record ValueService, value : Int32 do
   include ValueInterface
 end
 
+ADI.bind override_binding, 1
+ADI.bind override_binding, 2
 ADI.bind api_key, "123ABC"
 ADI.bind config, {id: 12_i64, active: true}
 ADI.bind odd_values, ["@value_one", "@value_three"]
@@ -194,6 +196,7 @@ ADI.bind prime_values, "!prime_value"
 
 @[ADI::Register(public: true)]
 record BindingClient,
+  override_binding : Int32,
   api_key : String,
   config : NamedTuple(id: Int64, active: Bool),
   odd_values : Array(ValueInterface),
