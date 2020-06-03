@@ -20,12 +20,15 @@ alias ADI = Athena::DependencyInjection
 # Using interfaces allows changing the functionality of a type by just changing what service gets injected into it, such as via an alias.
 # See this [blog post](https://dev.to/blacksmoke16/dependency-injection-in-crystal-2d66#plug-and-play) for an example of this.
 module Athena::DependencyInjection
-  private BINDINGS = {} of Nil => Nil
+  private BINDINGS            = {} of Nil => Nil
+  private AUTO_CONFIGURATIONS = {} of Nil => Nil
 
   # Allows binding a *value* to a *key* in order to enable auto registration of that value.
   #
   # Bindings allow scalar values, or those that could not otherwise be handled via [service aliases](./DependencyInjection/Register.html#aliasing-services), to be auto registered.
   # This allows those arguments to be defined once and reused, as opposed to using named arguments to manually specify them for each service.
+  #
+  # ### Example
   #
   # ```
   # module ValueInterface; end
@@ -62,6 +65,46 @@ module Athena::DependencyInjection
     {% BINDINGS[name] = value %}
   end
 
+  # Applies the provided *options* to any registered service of the provided *type*.
+  #
+  # A common use case of this would be to apply a specific tag to all instances of an interface; thus preventing the need to manually apply the tag for each implementation.
+  # This can be paired with `Athena::DependencyInjection.bind` to make working with tags easier.
+  #
+  # It can also be used to set the `public` and `lazy` options.
+  #
+  # ### Example
+  #
+  # ```
+  # module ConfigInterface; end
+  #
+  # # Automatically apply the `"config"` tag to all instances of `ConfigInterface`.
+  # ADI.auto_configure ConfigInterface, {tags: ["config"]}
+  #
+  # @[ADI::Register]
+  # record ConfigOne do
+  #   include ConfigInterface
+  # end
+  #
+  # @[ADI::Register]
+  # record ConfigTwo do
+  #   include ConfigInterface
+  # end
+  #
+  # # Options supplied on the annotation itself override the auto configured options.
+  # @[ADI::Register(tags: [] of String)]
+  # record ConfigThree do
+  #   include ConfigInterface
+  # end
+  #
+  # @[ADI::Register(_configs: "!config", public: true)]
+  # record ConfigClient, configs : Array(ConfigInterface)
+  #
+  # ADI.container.config_client.configs # => [ConfigOne(), ConfigTwo()]
+  # ```
+  macro auto_configure(type, options)
+    {% AUTO_CONFIGURATIONS[type.resolve] = options %}
+  end
+
   # Registers a service based on the type the annotation is applied to.
   #
   # The type of the service affects how it behaves within the container.  When a `struct` service is retrieved or injected into a type, it will be a copy of the one in the SC (passed by value).
@@ -69,6 +112,7 @@ module Athena::DependencyInjection
   # to share state between services.
   #
   # ## Optional Arguments
+  #
   # In most cases, the annotation can be applied without additional arguments.  However, the annotation accepts a handful of optional arguments to fine tune how the service is registered.
   #
   # * `name : String`- The name of the service.  Should be unique.  Defaults to the type's FQN snake cased.
@@ -81,6 +125,7 @@ module Athena::DependencyInjection
   # ## Examples
   #
   # ### Basic Usage
+  #
   # The simplest usage involves only applying the `ADI::Register` annotation to a type.  If the type does not have any arguments, then it is simply registered as a service as is.  If the type _does_ have arguments, then an attempt is made to register the service by automatically resolving dependencies based on type restrictions.
   #
   # ```
@@ -176,6 +221,7 @@ module Athena::DependencyInjection
   # ```
   #
   # ### Scalar Arguments
+  #
   # The auto registration logic as shown in previous examples only works on service dependencies.  Scalar arguments, such as Arrays, Strings, NamedTuples, etc, must be defined manually.
   # This is achieved by using the argument's name prefixed with a `_` symbol as named arguments within the annotation.
   #
@@ -215,13 +261,17 @@ module Athena::DependencyInjection
   # ADI.container.array_client # => ArrayClient(@services=[One(), Three()])
   # ```
   #
-  # While scalar arguments cannot be auto registered by default, the `ADI.bind` macro can be used to support it.
+  # While scalar arguments cannot be auto registered by default, the `Athena::DependencyInjection.bind` macro can be used to support it.  For example: `ADI.bind shell, "bash"`.
+  # This would now inject the string `"bash"` whenever an argument named `shell` is encountered.
   #
   # ### Tagging Services
+  #
   # Services can also be tagged.  Service tags allows another service to have all services with a specific tag injected as a dependency.
   # A tag consists of a name, and additional metadata related to the tag.
   # Currently the only supported metadata value is `priority`, which controls the order in which the services are injected; the higher the priority
   # the sooner in the array it would be.  In the future support for custom tag metadata will be implemented.
+  #
+  # The `Athena::DependencyInjection.auto_configure` macro may also be used to make working with tags easier.
   #
   # ```
   # PARTNER_TAG = "partner"
@@ -253,7 +303,11 @@ module Athena::DependencyInjection
   # #    FeedPartner(@id=4, @name="Microsoft")]>
   # ```
   #
+  # While tagged services cannot be injected automatically by default, the `Athena::DependencyInjection.bind` macro can be used to support it.  For example: `ADI.bind partners, "!partner"`.
+  # This would now inject all services with the `partner` tagged when an argument named `partners` is encountered.
+  #
   # ### Optional Services
+  #
   # Services defined with a nillable type restriction are considered to be optional.  If no service could be resolved from the type, then `nil` is injected instead.
   # Similarly, if the argument has a default value, that value would be used instead.
   #

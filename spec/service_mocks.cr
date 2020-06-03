@@ -201,3 +201,47 @@ record BindingClient,
   config : NamedTuple(id: Int64, active: Bool),
   odd_values : Array(ValueInterface),
   prime_values : Array(ValueInterface)
+
+######################
+# AUTO CONFIGURATION #
+######################
+module ConfigInterface; end
+
+@[ADI::Register]
+record ConfigOne do
+  include ConfigInterface
+end
+
+@[ADI::Register]
+record ConfigTwo do
+  include ConfigInterface
+end
+
+@[ADI::Register(tags: [] of String)]
+record ConfigThree do
+  include ConfigInterface
+end
+
+@[ADI::Register]
+struct ConfigFour
+  class_getter? initialized : Bool = false
+
+  def initialize
+    @@initialized = true
+  end
+end
+
+@[ADI::Register]
+struct ConfigFive
+  class_getter? initialized : Bool = false
+
+  def initialize
+    @@initialized = true
+  end
+end
+
+@[ADI::Register(_configs: "!config", public: true)]
+record ConfigClient, configs : Array(ConfigInterface)
+
+ADI.auto_configure ConfigInterface, {tags: ["config"]}
+ADI.auto_configure ConfigFour, {public: true, lazy: false}

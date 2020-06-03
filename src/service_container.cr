@@ -21,6 +21,8 @@ class Athena::DependencyInjection::ServiceContainer
             {% service.raise "Failed to register services for '#{service}'.  Services based on this type must each explicitly provide a name." %}
           {% end %}
 
+          {% auto_configuration = (key = AUTO_CONFIGURATIONS.keys.find &.>=(service.resolve)) ? AUTO_CONFIGURATIONS[key] : {} of Nil => Nil %}
+
           {% for ann in annotations %}
             # If positional arguments are provided, use them as generic arguments
             {% generics = ann.args %}
@@ -46,7 +48,7 @@ class Athena::DependencyInjection::ServiceContainer
               {% alias_hash[ann[:alias].resolve] = service_id %}
             {% end %}
 
-            {% if ann_tags = ann[:tags] %}
+            {% if (ann_tags = ann[:tags]) || (ann_tags = auto_configuration[:tags]) %}
               {% ann.raise "Failed to register service `#{service_id.id}`.  Tags must be an ArrayLiteral or TupleLiteral, not #{ann_tags.class_name.id}." unless ann_tags.is_a? ArrayLiteral %}
               {% tags = ann_tags.map do |tag|
                    if tag.is_a? StringLiteral
@@ -71,8 +73,8 @@ class Athena::DependencyInjection::ServiceContainer
               {%
                 service_hash[service_id] = {
                   generics:           generics,
-                  lazy:               ann[:lazy] != nil ? ann[:lazy] : true,
-                  public:             ann[:public] != nil ? ann[:public] : false,
+                  lazy:               ann[:lazy] != nil ? ann[:lazy] : (auto_configuration[:lazy] != nil ? auto_configuration[:lazy] : true),
+                  public:             ann[:public] != nil ? ann[:public] : (auto_configuration[:public] != nil ? auto_configuration[:public] : false),
                   public_alias:       ann[:public_alias] != nil ? ann[:public_alias] : false,
                   service_annotation: ann,
                   tags:               tags,

@@ -98,5 +98,21 @@ describe Athena::DependencyInjection::ServiceContainer do
         service.prime_values.should eq [ValueService.new(2), ValueService.new(3)]
       end
     end
+
+    describe "with auto configured services" do
+      it "supports adding tags" do
+        services = ADI.container.config_client.configs
+        services.size.should eq 2
+        services[0].should be_a ConfigOne
+        services[1].should be_a ConfigTwo
+      end
+
+      it "supports changing the visibility/laziness of a service" do
+        ConfigFour.initialized?.should be_true
+        ConfigFive.initialized?.should be_false
+
+        ADI.container.config_four.should be_a ConfigFour
+      end
+    end
   end
 end
