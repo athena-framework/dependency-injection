@@ -115,8 +115,7 @@ class Athena::DependencyInjection::ServiceContainer
               elsif named_arg.is_a?(StringLiteral) && named_arg.starts_with?('!')
                 tagged_services = [] of Nil
 
-                # Build an array of services with the given tag,
-                # along with the tag metadata
+                # Build an array of services with the given tag, along with the tag metadata
                 service_hash.each do |id, s_metadata|
                   if t = s_metadata[:tags].find { |tag| tag[:name] == named_arg[1..-1] }
                     tagged_services << {id.id, t}
@@ -130,7 +129,13 @@ class Athena::DependencyInjection::ServiceContainer
               else
                 named_arg
               end
-            elsif binding_value = BINDINGS[initializer_arg.name.stringify]
+            elsif (bindings = BINDINGS[initializer_arg.name.stringify]) && # Check if there are any bindings defined for this argument
+                  (
+                    (binding = bindings[:typed].find &.[:type].<=(initializer_arg.restriction.resolve)) || # First try resolving it via a typed bindings since they are more specific
+                    (binding = bindings[:untyped].first)                                                   # Otherwise fallback on last defined untyped binding (they're pushed in reverse order)
+                  )
+              binding_value = binding[:value]
+
               if binding_value.is_a?(ArrayLiteral)
                 inner_binding_args = binding_value.map do |arr_arg|
                   if arr_arg.is_a?(ArrayLiteral)
@@ -148,8 +153,7 @@ class Athena::DependencyInjection::ServiceContainer
               elsif binding_value.is_a?(StringLiteral) && binding_value.starts_with?('!')
                 tagged_services = [] of Nil
 
-                # Build an array of services with the given tag,
-                # along with the tag metadata
+                # Build an array of services with the given tag, along with the tag metadata
                 service_hash.each do |id, s_metadata|
                   if t = s_metadata[:tags].find { |tag| tag[:name] == binding_value[1..-1] }
                     tagged_services << {id.id, t}
@@ -178,6 +182,7 @@ class Athena::DependencyInjection::ServiceContainer
                 # Return a default value if any
                 if !initializer_arg.default_value.is_a? Nop
                   initializer_arg.default_value
+                  # including `nil` if thats a possibility
                 elsif initializer_arg.restriction.resolve.nilable?
                   nil
                 else
@@ -191,8 +196,7 @@ class Athena::DependencyInjection::ServiceContainer
                 # Otherwise fallback on the argument's name as well
                 if resolved_service = resolved_services.find(&.==(initializer_arg.name))
                   resolved_service.id
-                  # If no service with that name could be resolved,
-                  # check the alias map for the restriction
+                  # If no service with that name could be resolved, check the alias map for the restriction
                 elsif aliased_service = alias_hash[initializer_arg.restriction.resolve]
                   # If one is found returned the aliased service
                   aliased_service.id

@@ -1,4 +1,5 @@
 require "./service_container"
+require "compiler/crystal/macros"
 
 # :nodoc:
 class Fiber
@@ -22,48 +23,6 @@ alias ADI = Athena::DependencyInjection
 module Athena::DependencyInjection
   private BINDINGS            = {} of Nil => Nil
   private AUTO_CONFIGURATIONS = {} of Nil => Nil
-
-  # Allows binding a *value* to a *key* in order to enable auto registration of that value.
-  #
-  # Bindings allow scalar values, or those that could not otherwise be handled via [service aliases](./DependencyInjection/Register.html#aliasing-services), to be auto registered.
-  # This allows those arguments to be defined once and reused, as opposed to using named arguments to manually specify them for each service.
-  #
-  # ### Example
-  #
-  # ```
-  # module ValueInterface; end
-  #
-  # @[ADI::Register(_value: 1, name: "value_one")]
-  # @[ADI::Register(_value: 2, name: "value_two")]
-  # @[ADI::Register(_value: 3, name: "value_three")]
-  # record ValueService, value : Int32 do
-  #   include ValueInterface
-  # end
-  #
-  # ADI.bind api_key, ENV["API_KEY"]
-  # ADI.bind config, {id: 12_i64, active: true}
-  # ADI.bind static_value, 123
-  # ADI.bind odd_values, ["@value_one", "@value_three"]
-  #
-  # @[ADI::Register(public: true)]
-  # record BindingClient,
-  #   api_key : String,
-  #   config : NamedTuple(id: Int64, active: Bool),
-  #   static_value : Int32,
-  #   odd_values : Array(ValueInterface)
-  #
-  # ADI.container.binding_client # =>
-  # # BindingClient(
-  # #  @api_key="123ABC",
-  # #  @config={id: 12, active: true},
-  # #  @static_value=123,
-  # #  @odd_values=[ValueService(@value=1), ValueService(@value=3)])
-  # ```
-  macro bind(key, value)
-    {% name = key.id.stringify %}
-
-    {% BINDINGS[name] = value %}
-  end
 
   # Applies the provided *options* to any registered service of the provided *type*.
   #
@@ -103,6 +62,84 @@ module Athena::DependencyInjection
   # ```
   macro auto_configure(type, options)
     {% AUTO_CONFIGURATIONS[type.resolve] = options %}
+  end
+
+  # Allows binding a *value* to a *key* in order to enable auto registration of that value.
+  #
+  # Bindings allow scalar values, or those that could not otherwise be handled via [service aliases](./DependencyInjection/Register.html#aliasing-services), to be auto registered.
+  # This allows those arguments to be defined once and reused, as opposed to using named arguments to manually specify them for each service.
+  #
+  # Bindings can also be declared with a type restriction to allow taking the type restriction of the argument into account.
+  # Typed bindings are always checked first as the most specific type is always preferred.
+  # If no typed bindings match the argument's type, then the last defined untyped bindings is used.
+  #
+  # ### Example
+  #
+  # ```
+  # module ValueInterface; end
+  #
+  # @[ADI::Register(_value: 1, name: "value_one")]
+  # @[ADI::Register(_value: 2, name: "value_two")]
+  # @[ADI::Register(_value: 3, name: "value_three")]
+  # record ValueService, value : Int32 do
+  #   include ValueInterface
+  # end
+  #
+  # # Untyped bindings
+  # ADI.bind api_key, ENV["API_KEY"]
+  # ADI.bind config, {id: 12_i64, active: true}
+  # ADI.bind static_value, 123
+  # ADI.bind odd_values, ["@value_one", "@value_three"]
+  # ADI.bind value_arr, [true, true, false]
+  #
+  # # Typed bindings
+  # ADI.bind value_arr : Array(Int32), [1, 2, 3]
+  # ADI.bind value_arr : Array(Float64), [1.0, 2.0, 3.0]
+  #
+  # @[ADI::Register(public: true)]
+  # record BindingClient,
+  #   api_key : String,
+  #   config : NamedTuple(id: Int64, active: Bool),
+  #   static_value : Int32,
+  #   odd_values : Array(ValueInterface)
+  #
+  # @[ADI::Register(public: true)]
+  # record IntArr, value_arr : Array(Int32)
+  #
+  # @[ADI::Register(public: true)]
+  # record FloatArr, value_arr : Array(Float64)
+  #
+  # @[ADI::Register(public: true)]
+  # record BoolArr, value_arr : Array(Bool)
+  #
+  # ADI.container.binding_client # =>
+  # # BindingClient(
+  # #  @api_key="123ABC",
+  # #  @config={id: 12, active: true},
+  # #  @static_value=123,
+  # #  @odd_values=[ValueService(@value=1), ValueService(@value=3)])
+  #
+  # ADI.container.int_arr   # => IntArr(@value_arr=[1, 2, 3])
+  # ADI.container.float_arr # => FloatArr(@value_arr=[1.0, 2.0, 3.0])
+  # ADI.container.bool_arr  # => BoolArr(@value_arr=[true, true, false])
+  # ```
+  macro bind(key, value)
+    {% if key.is_a? TypeDeclaration %}
+      {% name = key.var.id.stringify %}
+      {% type = key.type.resolve %}
+    {% else %}
+      {% name = key.id.stringify %}
+      {% type = Crystal::Macros::Nop %}
+    {% end %}
+
+    # TODO: Refactor this to ||= once https://github.com/crystal-lang/crystal/pull/9409 is released
+    {% BINDINGS[name] = {typed: [] of Nil, untyped: [] of Nil} if BINDINGS[name] == nil %}
+
+    {% if type == Crystal::Macros::Nop %}
+      {% BINDINGS[name][:untyped].unshift({value: value, type: type}) %}
+    {% else %}
+      {% BINDINGS[name][:typed].unshift({value: value, type: type}) %}
+    {% end %}
   end
 
   # Registers a service based on the type the annotation is applied to.

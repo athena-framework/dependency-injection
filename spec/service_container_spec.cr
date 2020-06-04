@@ -89,13 +89,25 @@ describe Athena::DependencyInjection::ServiceContainer do
     end
 
     describe "with bound values" do
-      it "should use the bound values" do
+      it "without types" do
         service = ADI.container.binding_client
         service.override_binding.should eq 2
         service.api_key.should eq "123ABC"
         service.config.should eq({id: 12_i64, active: true})
         service.odd_values.should eq [ValueService.new(1), ValueService.new(3)]
         service.prime_values.should eq [ValueService.new(2), ValueService.new(3)]
+      end
+
+      it "with types" do
+        ADI.container.int_arr_client.values.should eq [1, 2, 3]
+        ADI.container.str_arr_client.values.should eq ["one", "two", "three"]
+        ADI.container.mixed_untyped_binding_client.mixed_type_value.should eq 1
+        ADI.container.mixed_typed_binding_client.mixed_type_value.should be_true
+        ADI.container.mixed_both_binding_client.mixed_type_value.should be_true
+
+        service = ADI.container.typed_binding_client
+        service.debug.should eq 0
+        service.typed_value.should eq "bar"
       end
     end
 

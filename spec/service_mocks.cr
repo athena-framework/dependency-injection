@@ -202,6 +202,48 @@ record BindingClient,
   odd_values : Array(ValueInterface),
   prime_values : Array(ValueInterface)
 
+# Bindings with same name, but diff restrictions
+ADI.bind values : Array(String), ["one", "two", "three"]
+ADI.bind values : Array(Int32), [1, 2, 3]
+
+# Override bindings with different (but still compatible) type restriction
+ADI.bind debug : Bool, false
+ADI.bind debug : Int32, 0
+
+# Override bindings with same type restriction
+ADI.bind typed_value : String, "foo"
+ADI.bind typed_value : String, "bar"
+
+# Correctly handles type and untyped bindings of same name.
+# Should try typed bindings first since they are more specific,
+# otherwise falling back on last defined untyped binding
+ADI.bind mixed_type_value : Bool, true
+ADI.bind mixed_type_value, 2
+ADI.bind mixed_type_value, 1
+
+@[ADI::Register(public: true)]
+record TypedBindingClient,
+  debug : Int32 | Bool,
+  typed_value : String
+
+@[ADI::Register(public: true)]
+record MixedUntypedBindingClient,
+  mixed_type_value : Int32
+
+@[ADI::Register(public: true)]
+record MixedTypedBindingClient,
+  mixed_type_value : Bool
+
+@[ADI::Register(public: true)]
+record MixedBothBindingClient,
+  mixed_type_value : Bool | Int32
+
+@[ADI::Register(public: true)]
+record IntArrClient, values : Array(Int32)
+
+@[ADI::Register(public: true)]
+record StrArrClient, values : Array(String)
+
 ######################
 # AUTO CONFIGURATION #
 ######################
