@@ -373,6 +373,26 @@ module Athena::DependencyInjection
   # #  @service_existing=OptionalExistingService(),
   # #  @service_missing=nil>
   # ```
+  #
+  # ### Generic Services
+  #
+  # Generic arguments can be provided as positional arguments within the `ADI::Register` annotation.
+  #
+  # NOTE: Services based on generic types _MUST_ explicitly provide a name via the `name` field within the `ADI::Register` annotation
+  # since there wouldn't be a way to tell them apart from the class name alone.
+  #
+  # ```
+  # @[ADI::Register(Int32, Bool, name: "int_service", public: true)]
+  # @[ADI::Register(Float64, Bool, name: "float_service", public: true)]
+  # struct GenericService(T, B)
+  #   def type
+  #     {T, B}
+  #   end
+  # end
+  #
+  # ADI.container.int_service.type   # => {Int32, Bool}
+  # ADI.container.float_service.type # => {Float64, Bool}
+  # ```
   annotation Register; end
 
   # Specifies which constructor should be used for injection.
