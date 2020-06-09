@@ -9,7 +9,7 @@ jobs:
   deploy_docs:
     runs-on: ubuntu-latest
     container:
-      image: crystallang/crystal:latest-alpine
+      image: crystallang/crystal:latest
     steps:
       - uses: actions/checkout@v2
       - name: Build
