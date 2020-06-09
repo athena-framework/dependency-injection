@@ -1,10 +1,8 @@
 require "../spec_helper"
 
 @[ADI::Register]
-class Store
-  include ADI::Service
-
+class Service
   property name : String = "Jim"
 end
 
-ADI::ServiceContainer.new.store
+ADI::ServiceContainer.new.service

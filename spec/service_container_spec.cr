@@ -1,124 +1,129 @@
 require "./spec_helper"
 
-describe ADI::ServiceContainer do
-  describe "#get" do
-    describe "by type" do
-      it "should return an array of services with that type" do
-        services = CONTAINER.get FakeServices
+describe Athena::DependencyInjection::ServiceContainer do
+  describe "registration" do
+    describe "that resolves to a single type" do
+      it "should inject that type" do
+        ADI.container.single_client.service.should be_a SingleService
+      end
+    end
+
+    describe "that is namespaced" do
+      it "correctly resolves the service" do
+        ADI.container.namespace_client.service.should be_a MyApp::Models::Foo
+      end
+    end
+
+    describe "that resolves to more than one type" do
+      describe "with an alias" do
+        it "should inject the aliased service based on interface" do
+          ADI.container.transformer_alias_client.service.should be_a ReverseTransformer
+        end
+
+        it "allows overriding aliases" do
+          ADI.container.get(ConverterInterface).should be_a ConverterTwo
+        end
+      end
+
+      describe "variable name matches a service" do
+        it "should inject the service whose ID matches the name of the constructor variable" do
+          ADI.container.transformer_alias_name_client.service.should be_a ShoutTransformer
+        end
+      end
+    end
+
+    describe "where a dependency is optional" do
+      describe "and does not exist" do
+        describe "without a default value" do
+          it "should inject `nil`" do
+            ADI.container.optional_client.service_missing.should be_nil
+          end
+        end
+
+        describe "with a default value" do
+          it "should inject the default" do
+            ADI.container.optional_client.service_default.should eq 12
+          end
+        end
+      end
+
+      describe "and does exist" do
+        it "should inject that service" do
+          ADI.container.optional_client.service_existing.should be_a OptionalExistingService
+        end
+      end
+    end
+
+    describe "with a generic service" do
+      it "correctly initializes the service with the given generic arguments" do
+        ADI.container.int_service.type.should eq({Int32, Bool})
+        ADI.container.float_service.type.should eq({Float64, Bool})
+      end
+    end
+
+    describe "with scalar arguments" do
+      it "passes them to the constructor" do
+        service = ADI.container.scalar_client
+        service.value.should eq 22
+        service.array.should eq [1, 2, 3]
+        service.named_tuple.should eq({id: 17, active: true})
+      end
+    end
+
+    describe "with explicit array of services" do
+      it "passes them to the constructor" do
+        services = ADI.container.array_client.services
+        services[0].should be_a ArrayService
+        services[1].should be_a API::Models::NestedArrayService
+      end
+    end
+
+    describe "that is tag based" do
+      it "injects all services with that tag, ordering based on priority" do
+        services = ADI.container.partner_client.services
+        services[0].id.should eq 3
+        services[1].id.should eq 1
+        services[2].id.should eq 2
+        services[3].id.should eq 4
+      end
+    end
+
+    describe "with bound values" do
+      it "without types" do
+        service = ADI.container.binding_client
+        service.override_binding.should eq 2
+        service.api_key.should eq "123ABC"
+        service.config.should eq({id: 12_i64, active: true})
+        service.odd_values.should eq [ValueService.new(1), ValueService.new(3)]
+        service.prime_values.should eq [ValueService.new(2), ValueService.new(3)]
+      end
+
+      it "with types" do
+        ADI.container.int_arr_client.values.should eq [1, 2, 3]
+        ADI.container.str_arr_client.values.should eq ["one", "two", "three"]
+        ADI.container.mixed_untyped_binding_client.mixed_type_value.should eq 1
+        ADI.container.mixed_typed_binding_client.mixed_type_value.should be_true
+        ADI.container.mixed_both_binding_client.mixed_type_value.should be_true
+
+        service = ADI.container.typed_binding_client
+        service.debug.should eq 0
+        service.typed_value.should eq "bar"
+      end
+    end
+
+    describe "with auto configured services" do
+      it "supports adding tags" do
+        services = ADI.container.config_client.configs
         services.size.should eq 2
-        services[0].should be_a FakeService
-        services[1].should be_a CustomFooFakeService
-      end
-    end
-
-    describe "by name" do
-      it "should allow getting public services directly" do
-        CONTAINER.store.name.should eq "Jim"
-      end
-    end
-
-    describe "with array/namedTuple arguments" do
-      it "should be injected correctly" do
-        service = CONTAINER.static_args
-        service.scalar_arr.should eq [1, 2, 3]
-        service.service_arr.first.should be_a CustomFooFakeService
-        service.named_tuple_arg.should eq({id: 99, active: true})
-      end
-    end
-
-    it "should use the overridden service" do
-      CONTAINER.error_renderer.value.should eq 2
-    end
-  end
-
-  describe "#has?" do
-    describe "when the service has been registered" do
-      it "should return true" do
-        CONTAINER.has?("blah").should be_true
-      end
-    end
-
-    describe "when the service has been registered" do
-      it "should return false" do
-        CONTAINER.has?("i_do_not_exist").should be_false
-      end
-    end
-  end
-
-  describe "#resolve" do
-    describe "when there are no services with the type" do
-      it "should raise an exception" do
-        expect_raises Exception, "Could not resolve a service with type 'UnknownService' and name of 'unknown_service'." { CONTAINER.resolve UnknownService, "unknown_service" }
-      end
-    end
-
-    describe "when there is a single match" do
-      it "should return the service" do
-        CONTAINER.resolve(FakeService, "fake_service").should be_a FakeService
-      end
-    end
-
-    describe "when there is are multiple matches" do
-      describe "that does not match the name" do
-        it "should raise an exception" do
-          expect_raises Exception, "Could not resolve a service with type 'FeedPartner' and name of 'yahoo'." { CONTAINER.resolve FeedPartner, "yahoo" }
-        end
+        services[0].should be_a ConfigOne
+        services[1].should be_a ConfigTwo
       end
 
-      describe "when the name and type are not related" do
-        it "should raise an exception" do
-          expect_raises Exception, "Could not resolve a service with type 'FakeServices' and name of 'google'." { CONTAINER.resolve FakeServices, "google" }
-        end
-      end
+      it "supports changing the visibility/laziness of a service" do
+        ConfigFour.initialized?.should be_true
+        ConfigFive.initialized?.should be_false
 
-      describe "that matches a name" do
-        it "should return the service" do
-          service = CONTAINER.resolve(FeedPartner, "google").as(FeedPartner)
-          service.should be_a FeedPartner
-          service.id.should eq "GOOGLE"
-        end
-      end
-    end
-  end
-
-  describe "#tagged" do
-    it "should return the service with the given tag" do
-      services = CONTAINER.tagged("partner")
-      services.size.should eq 2
-
-      google = services[0].as(FeedPartner)
-      google.should be_a FeedPartner
-      google.id.should eq "GOOGLE"
-
-      facebook = services[1].as(FeedPartner)
-      facebook.should be_a FeedPartner
-      facebook.id.should eq "FACEBOOK"
-    end
-
-    it "should return the service with the given tag" do
-      services = CONTAINER.tagged("feed_partner")
-      services.size.should eq 1
-
-      google = services[0].as(FeedPartner)
-      google.should be_a FeedPartner
-      google.id.should eq "GOOGLE"
-    end
-
-    it "should return the service with the given tag" do
-      CONTAINER.tagged("fake_tag").should eq [] of ADI::Service
-    end
-  end
-
-  describe "optional" do
-    describe "that is not registered" do
-      it "should supply nil" do
-        CONTAINER.optional_missing.service.should be_nil
-      end
-    end
-
-    describe "that is registered" do
-      it "should supply the service" do
-        CONTAINER.optional_registered.logger.should be_a Logger
+        ADI.container.config_four.should be_a ConfigFour
       end
     end
   end

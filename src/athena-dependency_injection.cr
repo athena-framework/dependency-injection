@@ -1,4 +1,5 @@
 require "./service_container"
+require "compiler/crystal/macros"
 
 # :nodoc:
 class Fiber
@@ -8,232 +9,418 @@ end
 # Convenience alias to make referencing `Athena::DependencyInjection` types easier.
 alias ADI = Athena::DependencyInjection
 
-# Athena's Dependency Injection (DI) component, `ADI` for short, adds a service container layer to your project.  This allows a project to share useful objects, aka services, throughout the project.
-# These objects live in a special struct called the `ADI::ServiceContainer` (SC).  Object instances can be retrieved from the container, or even injected directly into types as a form of constructor DI.
+# Athena's Dependency Injection (DI) component, `ADI` for short, adds a service container layer to your project.  This useful objects, aka services, to be shared throughout the project.
+# These objects live in a special class called the `ADI::ServiceContainer` (SC).
 #
-# The SC is lazily initialized on fibers; this allows the SC to be accessed anywhere within the project.  The `ADI.container` method will return the SC for the current fiber.
-# Since the SC is defined on fibers, it allows for each fiber to have its own SC.  This can be useful for web frameworks as each request would have its own SC scoped to that request.
-# This however, is up to the each project to implement.
+# The SC is lazily initialized on fibers; this allows the SC to be accessed anywhere within the project.  The `Athena::DependencyInjection.container` method will return the SC for the current fiber.
+# Since the SC is defined on fibers, it allows for each fiber to have its own SC instance.  This can be useful for web frameworks as each request would have its own SC scoped to that request.
 #
 # * See `ADI::Register` for documentation on registering services.
-# * See `ADI::ServiceContainer` for documentation on working directly with the SC.
-# * See `ADI::Injectable` for documentation on auto injecting services into non service types.
 #
 # NOTE: It is highly recommended to use interfaces as opposed to concrete types when defining the initializers for both services and non-services.
-# Using interfaces allows changing the functionality of a type by just changing what service gets injected into it.
+# Using interfaces allows changing the functionality of a type by just changing what service gets injected into it, such as via an alias.
 # See this [blog post](https://dev.to/blacksmoke16/dependency-injection-in-crystal-2d66#plug-and-play) for an example of this.
 module Athena::DependencyInjection
-  # Stores metadata associated with a specific service.
+  private BINDINGS            = {} of Nil => Nil
+  private AUTO_CONFIGURATIONS = {} of Nil => Nil
+
+  # Applies the provided *options* to any registered service of the provided *type*.
+  #
+  # A common use case of this would be to apply a specific tag to all instances of an interface; thus preventing the need to manually apply the tag for each implementation.
+  # This can be paired with `Athena::DependencyInjection.bind` to make working with tags easier.
+  #
+  # It can also be used to set the `public` and `lazy` options.
+  #
+  # ### Example
+  #
+  # ```
+  # module ConfigInterface; end
+  #
+  # # Automatically apply the `"config"` tag to all instances of `ConfigInterface`.
+  # ADI.auto_configure ConfigInterface, {tags: ["config"]}
+  #
+  # @[ADI::Register]
+  # record ConfigOne do
+  #   include ConfigInterface
+  # end
+  #
+  # @[ADI::Register]
+  # record ConfigTwo do
+  #   include ConfigInterface
+  # end
+  #
+  # # Options supplied on the annotation itself override the auto configured options.
+  # @[ADI::Register(tags: [] of String)]
+  # record ConfigThree do
+  #   include ConfigInterface
+  # end
+  #
+  # @[ADI::Register(_configs: "!config", public: true)]
+  # record ConfigClient, configs : Array(ConfigInterface)
+  #
+  # ADI.container.config_client.configs # => [ConfigOne(), ConfigTwo()]
+  # ```
+  macro auto_configure(type, options)
+    {% AUTO_CONFIGURATIONS[type.resolve] = options %}
+  end
+
+  # Allows binding a *value* to a *key* in order to enable auto registration of that value.
+  #
+  # Bindings allow scalar values, or those that could not otherwise be handled via [service aliases](./DependencyInjection/Register.html#aliasing-services), to be auto registered.
+  # This allows those arguments to be defined once and reused, as opposed to using named arguments to manually specify them for each service.
+  #
+  # Bindings can also be declared with a type restriction to allow taking the type restriction of the argument into account.
+  # Typed bindings are always checked first as the most specific type is always preferred.
+  # If no typed bindings match the argument's type, then the last defined untyped bindings is used.
+  #
+  # ### Example
+  #
+  # ```
+  # module ValueInterface; end
+  #
+  # @[ADI::Register(_value: 1, name: "value_one")]
+  # @[ADI::Register(_value: 2, name: "value_two")]
+  # @[ADI::Register(_value: 3, name: "value_three")]
+  # record ValueService, value : Int32 do
+  #   include ValueInterface
+  # end
+  #
+  # # Untyped bindings
+  # ADI.bind api_key, ENV["API_KEY"]
+  # ADI.bind config, {id: 12_i64, active: true}
+  # ADI.bind static_value, 123
+  # ADI.bind odd_values, ["@value_one", "@value_three"]
+  # ADI.bind value_arr, [true, true, false]
+  #
+  # # Typed bindings
+  # ADI.bind value_arr : Array(Int32), [1, 2, 3]
+  # ADI.bind value_arr : Array(Float64), [1.0, 2.0, 3.0]
+  #
+  # @[ADI::Register(public: true)]
+  # record BindingClient,
+  #   api_key : String,
+  #   config : NamedTuple(id: Int64, active: Bool),
+  #   static_value : Int32,
+  #   odd_values : Array(ValueInterface)
+  #
+  # @[ADI::Register(public: true)]
+  # record IntArr, value_arr : Array(Int32)
+  #
+  # @[ADI::Register(public: true)]
+  # record FloatArr, value_arr : Array(Float64)
+  #
+  # @[ADI::Register(public: true)]
+  # record BoolArr, value_arr : Array(Bool)
+  #
+  # ADI.container.binding_client # =>
+  # # BindingClient(
+  # #  @api_key="123ABC",
+  # #  @config={id: 12, active: true},
+  # #  @static_value=123,
+  # #  @odd_values=[ValueService(@value=1), ValueService(@value=3)])
+  #
+  # ADI.container.int_arr   # => IntArr(@value_arr=[1, 2, 3])
+  # ADI.container.float_arr # => FloatArr(@value_arr=[1.0, 2.0, 3.0])
+  # ADI.container.bool_arr  # => BoolArr(@value_arr=[true, true, false])
+  # ```
+  macro bind(key, value)
+    {% if key.is_a? TypeDeclaration %}
+      {% name = key.var.id.stringify %}
+      {% type = key.type.resolve %}
+    {% else %}
+      {% name = key.id.stringify %}
+      {% type = Crystal::Macros::Nop %}
+    {% end %}
+
+    # TODO: Refactor this to ||= once https://github.com/crystal-lang/crystal/pull/9409 is released
+    {% BINDINGS[name] = {typed: [] of Nil, untyped: [] of Nil} if BINDINGS[name] == nil %}
+
+    {% if type == Crystal::Macros::Nop %}
+      {% BINDINGS[name][:untyped].unshift({value: value, type: type}) %}
+    {% else %}
+      {% BINDINGS[name][:typed].unshift({value: value, type: type}) %}
+    {% end %}
+  end
+
+  # Registers a service based on the type the annotation is applied to.
   #
   # The type of the service affects how it behaves within the container.  When a `struct` service is retrieved or injected into a type, it will be a copy of the one in the SC (passed by value).
   # This means that changes made to it in one type, will _NOT_ be reflected in other types.  A `class` service on the other hand will be a reference to the one in the SC.  This allows it
-  # to share state between types.
+  # to share state between services.
   #
-  # ## Fields
-  # * `name : String`- The name that should be used for the service.  Defaults to the type's name snake cased.
+  # ## Optional Arguments
+  #
+  # In most cases, the annotation can be applied without additional arguments.  However, the annotation accepts a handful of optional arguments to fine tune how the service is registered.
+  #
+  # * `name : String`- The name of the service.  Should be unique.  Defaults to the type's FQN snake cased.
   # * `public : Bool` - If the service should be directly accessible from the container.  Defaults to `false`.
-  # * `tags : Array(String)` - Tags that should be assigned to the service.  Defaults to an empty array.
+  # * `public_alias : Bool` - If a service should be directly accessible from the container via an alias.  Defaults to `false`.
+  # * `lazy : Bool` - If the service should be lazily instantiated.  I.e. only instantiated when it is first accessed; either directly or as a dependency of another service.  Defaults to `true`.
+  # * `alias : T` - Injects `self` when this type is used as a type restriction.  See the Aliasing Services example for more information.
+  # * `tags : Array(String | NamedTuple(name: String, priority: Int32?))` - Tags that should be assigned to the service.  Defaults to an empty array.  See the Tagging Services example for more information.
   #
   # ## Examples
   #
-  # ### Without Arguments
-  # If the service doesn't have any arguments then the annotation can be applied without any extra options.
+  # ### Basic Usage
+  #
+  # The simplest usage involves only applying the `ADI::Register` annotation to a type.  If the type does not have any arguments, then it is simply registered as a service as is.  If the type _does_ have arguments, then an attempt is made to register the service by automatically resolving dependencies based on type restrictions.
   #
   # ```
   # @[ADI::Register]
-  # class Store
-  #   include ADI::Service
-  #
-  #   property uuid : String? = nil
-  # end
-  # ```
-  #
-  # ### Multiple Services of the Same Type
-  # If multiple `ADI::Register` annotations are applied onto the same type, multiple services will be registered based on that type.
-  # The name of each service must be explicitly set, otherwise only the last annotation would work.
-  #
-  # ```
-  # @[ADI::Register("GOOGLE", "Google", name: "google")]
-  # @[ADI::Register("FACEBOOK", "Facebook", name: "facebook")]
-  # struct FeedPartner
-  #   include ADI::Service
-  #
-  #   getter id : String
-  #   getter name : String
-  #
-  #   def initialize(@id : String, @name : String); end
-  # end
-  # ```
-  #
-  # ### Service Dependencies
-  # Services can be injected into another service by providing the name of the service as a string, prefixed with an `@` symbol.
-  # This syntax also works within arrays if you wished to inject a static set of services.
-  #
-  # ```
-  # @[ADI::Register]
-  # class Store
-  #   include ADI::Service
-  #
-  #   property uuid : String? = nil
-  # end
-  #
-  # @[ADI::Register("@store")]
-  # struct SomeService
-  #   include ADI::Service
-  #
-  #   def initialize(@store : Store); end
-  # end
-  # ```
-  #
-  # ### Optional Dependencies
-  # Services can be defined with optional dependencies by providing the name of the service as a string, prefixed with an `@?` symbol.
-  # Optional dependencies will supply `nil` to the initializer versus raising a compile time error if that service does not exist.
-  #
-  # ```
-  # @[ADI::Register("@?logger")]
-  # # Defines an optional dependency for the `logger` service.
-  # class Example
-  #   include ADI::Service
-  #
-  #   def initialize(logger : Logger?)
-  #     @logger = logger
-  #     # You could also instantiate another type if the ivar should remain not nilable
-  #     # @logger = logger || SomeDefaultLogger.new
+  # # Register a service without any dependencies.
+  # struct ShoutTransformer
+  #   def transform(value : String) : String
+  #     value.upcase
   #   end
   # end
-  # ```
   #
-  # ### Tagged Services
-  # Services can be injected into another service based on a tag by prefixing the name of the tag with an `!` symbol.
-  # This will provide an array of all services that have that tag.  It is advised to use this with a parent type/interface to type the ivar with.
+  # @[ADI::Register(public: true)]
+  # # The ShoutTransformer is injected based on the type restriction of the `transformer` argument.
+  # struct SomeAPIClient
+  #   def initialize(@transformer : ShoutTransformer); end
   #
-  # NOTE: The parent type must also include `ADI::Service`.
+  #   def send(message : String)
+  #     message = @transformer.transform message
   #
-  # ```
-  # abstract class SomeParentType
-  #   include ADI::Service
+  #     # ...
+  #   end
   # end
   #
-  # @[ADI::Register(tags: ["a_type"])]
-  # class SomeTypeOne < SomeParentType
-  #   include ADI::Service
-  # end
-  #
-  # @[ADI::Register(tags: ["a_type"])]
-  # class SomeTypeTwo < SomeParentType
-  #   include ADI::Service
-  # end
-  #
-  # @[ADI::Register("!a_type")]
-  # struct SomeService
-  #   include ADI::Service
-  #
-  #   def initialize(@types : Array(SomeParentType)); end
-  # end
+  # ADI.container.some_api_client.send "foo" # => FOO
   # ```
   #
-  # ### Redefining Services
-  # Services can be redefined by registering another service with the same name.  The last defined service with that name will be used.
-  # This allows a custom implementation of a service to be used as a dependency to another service, or for injection into a non service type.
+  # ### Aliasing Services
+  #
+  # An important part of DI is building against interfaces as opposed to concrete types.  This allows a type to depend upon abstractions rather than a specific implementation of the interface.  Or in other works, prevents a singular implementation from being tightly coupled with another type.
+  #
+  # We can use the `alias` argument when registering a service to tell the container that it should inject this service when a type restriction for the aliased service is found.
   #
   # ```
+  # # Define an interface for our services to use.
+  # module TransformerInterface
+  #   abstract def transform(value : String) : String
+  # end
+  #
+  # @[ADI::Register(alias: TransformerInterface)]
+  # # Alias the `TransformerInterface` to this service.
+  # struct ShoutTransformer
+  #   include TransformerInterface
+  #
+  #   def transform(value : String) : String
+  #     value.upcase
+  #   end
+  # end
+  #
   # @[ADI::Register]
-  # # The original ErrorRenderer, which could originate from an external shard.
-  # record ErrorRenderer, value : Int32 = 1 do
-  #   include ADI::Service
-  #   include ErrorRendererInterface
+  # # Define another transformer type.
+  # struct ReverseTransformer
+  #   include TransformerInterface
+  #
+  #   def transform(value : String) : String
+  #     value.reverse
+  #   end
   # end
   #
-  # @[ADI::Register(name: "error_renderer"]
-  # # The redefined service, any references to `error_renderer`, or `ErrorRendererInterface` will now resolve to `CustomErrorRenderer`.
-  # record CustomErrorRenderer, value : Int32 = 2 do
-  #   include ADI::Service
-  #   include ErrorRendererInterface
+  # @[ADI::Register(public: true)]
+  # # The `ShoutTransformer` is injected because the `TransformerInterface` is aliased to the `ShoutTransformer`.
+  # struct SomeAPIClient
+  #   def initialize(@transformer : TransformerInterface); end
+  #
+  #   def send(message : String)
+  #     message = @transformer.transform message
+  #
+  #     # ...
+  #   end
   # end
+  #
+  # ADI.container.some_api_client.send "foo" # => FOO
+  # ```
+  #
+  # Any service that uses `TransformerInterface` as a dependency type restriction will get the `ShoutTransformer`.
+  # However, it is also possible to use a specific implementation while still building against the interface.  The name of the constructor argument is used in part to resolve the dependency.
+  #
+  # ```
+  # @[ADI::Register(public: true)]
+  # # The `ReverseTransformer` is injected because the constructor argument's name matches the service name of `ReverseTransformer`.
+  # struct SomeAPIClient
+  #   def initialize(reverse_transformer : TransformerInterface)
+  #     @transformer = reverse_transformer
+  #   end
+  #
+  #   def send(message : String)
+  #     message = @transformer.transform message
+  #
+  #     # ...
+  #   end
+  # end
+  #
+  # ADI.container.some_api_client.send "foo" # => oof
+  # ```
+  #
+  # ### Scalar Arguments
+  #
+  # The auto registration logic as shown in previous examples only works on service dependencies.  Scalar arguments, such as Arrays, Strings, NamedTuples, etc, must be defined manually.
+  # This is achieved by using the argument's name prefixed with a `_` symbol as named arguments within the annotation.
+  #
+  # ```
+  # @[ADI::Register(_shell: ENV["SHELL"], _config: {id: 12_i64, active: true}, public: true)]
+  # struct ScalarClient
+  #   def initialize(@shell : String, @config : NamedTuple(id: Int64, active: Bool)); end
+  # end
+  #
+  # ADI.container.scalar_client # => ScalarClient(@config={id: 12, active: true}, @shell="/bin/bash")
+  # ```
+  # Arrays can also include references to services by prefixing the name of the service with an `@` symbol.
+  #
+  # ```
+  # module Interface; end
+  #
+  # @[ADI::Register]
+  # struct One
+  #   include Interface
+  # end
+  #
+  # @[ADI::Register]
+  # struct Two
+  #   include Interface
+  # end
+  #
+  # @[ADI::Register]
+  # struct Three
+  #   include Interface
+  # end
+  #
+  # @[ADI::Register(_services: ["@one", "@three"], public: true)]
+  # struct ArrayClient
+  #   def initialize(@services : Array(Interface)); end
+  # end
+  #
+  # ADI.container.array_client # => ArrayClient(@services=[One(), Three()])
+  # ```
+  #
+  # While scalar arguments cannot be auto registered by default, the `Athena::DependencyInjection.bind` macro can be used to support it.  For example: `ADI.bind shell, "bash"`.
+  # This would now inject the string `"bash"` whenever an argument named `shell` is encountered.
+  #
+  # ### Tagging Services
+  #
+  # Services can also be tagged.  Service tags allows another service to have all services with a specific tag injected as a dependency.
+  # A tag consists of a name, and additional metadata related to the tag.
+  # Currently the only supported metadata value is `priority`, which controls the order in which the services are injected; the higher the priority
+  # the sooner in the array it would be.  In the future support for custom tag metadata will be implemented.
+  #
+  # The `Athena::DependencyInjection.auto_configure` macro may also be used to make working with tags easier.
+  #
+  # ```
+  # PARTNER_TAG = "partner"
+  #
+  # @[ADI::Register(_id: 1, name: "google", tags: [{name: PARTNER_TAG, priority: 5}])]
+  # @[ADI::Register(_id: 2, name: "facebook", tags: [PARTNER_TAG])]
+  # @[ADI::Register(_id: 3, name: "yahoo", tags: [{name: "partner", priority: 10}])]
+  # @[ADI::Register(_id: 4, name: "microsoft", tags: [PARTNER_TAG])]
+  # # Register multiple services based on the same type.  Each service must give define a unique name.
+  # struct FeedPartner
+  #   getter id
+  #
+  #   def initialize(@id : Int32); end
+  # end
+  #
+  # @[ADI::Register(_services: "!partner", public: true)]
+  # # Inject all services with the `"partner"` tag into `self`.
+  # class PartnerClient
+  #   def initialize(@services : Array(FeedPartner))
+  #   end
+  # end
+  #
+  # ADI.container.partner_client # =>
+  # # #<PartnerClient:0x7f43c0a1ae60
+  # #  @services=
+  # #   [FeedPartner(@id=3, @name="Yahoo"),
+  # #    FeedPartner(@id=1, @name="Google"),
+  # #    FeedPartner(@id=2, @name="Facebook"),
+  # #    FeedPartner(@id=4, @name="Microsoft")]>
+  # ```
+  #
+  # While tagged services cannot be injected automatically by default, the `Athena::DependencyInjection.bind` macro can be used to support it.  For example: `ADI.bind partners, "!partner"`.
+  # This would now inject all services with the `partner` tagged when an argument named `partners` is encountered.
+  #
+  # ### Optional Services
+  #
+  # Services defined with a nillable type restriction are considered to be optional.  If no service could be resolved from the type, then `nil` is injected instead.
+  # Similarly, if the argument has a default value, that value would be used instead.
+  #
+  # ```
+  # struct OptionalMissingService
+  # end
+  #
+  # @[ADI::Register]
+  # struct OptionalExistingService
+  # end
+  #
+  # @[ADI::Register(public: true)]
+  # class OptionalClient
+  #   getter service_missing, service_existing, service_default
+  #
+  #   def initialize(
+  #     @service_missing : OptionalMissingService?,
+  #     @service_existing : OptionalExistingService?,
+  #     @service_default : OptionalMissingService | Int32 | Nil = 12
+  #   ); end
+  # end
+  #
+  # ADI.container.optional_client
+  # # #<OptionalClient:0x7fe7de7cdf40
+  # #  @service_default=12,
+  # #  @service_existing=OptionalExistingService(),
+  # #  @service_missing=nil>
+  # ```
+  #
+  # ### Generic Services
+  #
+  # Generic arguments can be provided as positional arguments within the `ADI::Register` annotation.
+  #
+  # NOTE: Services based on generic types _MUST_ explicitly provide a name via the `name` field within the `ADI::Register` annotation
+  # since there wouldn't be a way to tell them apart from the class name alone.
+  #
+  # ```
+  # @[ADI::Register(Int32, Bool, name: "int_service", public: true)]
+  # @[ADI::Register(Float64, Bool, name: "float_service", public: true)]
+  # struct GenericService(T, B)
+  #   def type
+  #     {T, B}
+  #   end
+  # end
+  #
+  # ADI.container.int_service.type   # => {Int32, Bool}
+  # ADI.container.float_service.type # => {Float64, Bool}
   # ```
   annotation Register; end
 
-  # Used to designate a type as a service.
+  # Specifies which constructor should be used for injection.
   #
-  # See `ADI::Register` for more details.
-  module Service; end
+  # ```
+  # @[ADI::Register(_value: 2, public: true)]
+  # class SomeService
+  #   @active : Bool = false
+  #
+  #   def initialize(value : String, @active : Bool)
+  #     @value = value.to_i
+  #   end
+  #
+  #   @[ADI::Inject]
+  #   def initialize(@value : Int32); end
+  # end
+  #
+  # ADI.container.some_service # => #<SomeService:0x7f51a77b1eb0 @active=false, @value=2>
+  # SomeService.new "1", true  # => #<SomeService:0x7f51a77b1e90 @active=true, @value=1>
+  # ```
+  #
+  # Without the `ADI::Inject` annotation, the first initializer would be used, which would fail since we are not providing a value for the `active` argument.
+  # `ADI::Inject` allows telling the service container that it should use the second constructor when registering this service.  This allows a constructor overload
+  # specific to DI to be used while still allowing the type to be used outside of DI via other constructors.
+  annotation Inject; end
 
   # Returns the `ADI::ServiceContainer` for the current fiber.
   def self.container : ADI::ServiceContainer
     Fiber.current.container
-  end
-
-  # Adds a new constructor that resolves the required services based on type and name.
-  #
-  # Can be included into a `class`/`struct` in order to automatically inject the required services from the container based on the type's initializer.
-  #
-  # Service lookup is based on the type restriction and name of the initializer arguments.  If there is only a single service
-  # of the required type, then that service is used.  If there are multiple services of the required type then the name of the argument's name is used.
-  # An exception is raised if a service was not able to be resolved.
-  #
-  # ## Examples
-  #
-  # ### Default Usage
-  #
-  # ```
-  # @[ADI::Register]
-  # class Store
-  #   include ADI::Service
-  #
-  #   property uuid : String = "UUID"
-  # end
-  #
-  # class MyNonService
-  #   include ADI::Injectable
-  #
-  #   getter store : Store
-  #
-  #   def initialize(@store : Store); end
-  # end
-  #
-  # MyNonService.new.store.uuid # => "UUID"
-  # ```
-  #
-  # ### Non Service Dependencies
-  #
-  # Named arguments take precedence.  This allows dependencies to be supplied explicitly without going through the resolving process; such as for testing.
-  # ```
-  # @[ADI::Register]
-  # class Store
-  #   include ADI::Service
-  #
-  #   property uuid : String = "UUID"
-  # end
-  #
-  # class MyNonService
-  #   include ADI::Injectable
-  #
-  #   getter store : Store
-  #   getter id : String
-  #
-  #   def initialize(@store : Store, @id : String); end
-  # end
-  #
-  # service = MyNonService.new(id: "FOO")
-  # service.store.uuid # => "UUID"
-  # service.id         # => "FOO"
-  # ```
-  module Injectable
-    macro included
-      macro finished
-        {% verbatim do %}
-          {% if initializer = @type.methods.find &.name.stringify.==("initialize") %}
-            # Auto generated via `ADI::Injectable` module.
-            def self.new(**args)
-              new(
-                {% for arg in initializer.args %}
-                  {{arg.name.id}}: args[{{arg.name.symbolize}}]? || ADI.container.resolve({{arg.restriction.id}}, {{arg.name.stringify}}),
-                {% end %}
-              )
-            end
-          {% end %}
-        {% end %}
-      end
-    end
   end
 end

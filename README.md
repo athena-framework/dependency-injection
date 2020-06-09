@@ -3,7 +3,7 @@
 [![CI](https://github.com/athena-framework/dependency-injection/workflows/CI/badge.svg)](https://github.com/athena-framework/dependency-injection/actions?query=workflow%3ACI)
 [![Latest release](https://img.shields.io/github/release/athena-framework/dependency-injection.svg)](https://github.com/athena-framework/dependency-injection/releases)
 
-Flexible instance based dependency injection service container library.
+Robust dependency injection service container framework.
 
 ## Installation
 

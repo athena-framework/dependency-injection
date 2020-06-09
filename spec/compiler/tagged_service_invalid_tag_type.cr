@@ -1,7 +1,7 @@
 require "../spec_helper"
 
-class TheService
-  include ADI::Service
+@[ADI::Register(tags: [true])]
+class TaggedService
 end
 
 ADI::ServiceContainer.new
