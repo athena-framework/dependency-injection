@@ -157,7 +157,7 @@ module Athena::DependencyInjection
   # * `public_alias : Bool` - If a service should be directly accessible from the container via an alias.  Defaults to `false`.
   # * `lazy : Bool` - If the service should be lazily instantiated.  I.e. only instantiated when it is first accessed; either directly or as a dependency of another service.  Defaults to `true`.
   # * `alias : T` - Injects `self` when this type is used as a type restriction.  See the Aliasing Services example for more information.
-  # * `tags : Array(String | NamedTuple(name: String, priority: Int32?))` - Tags that should be assigned to the service.  Defaults to an empty array.  See the Tagging Services example for more information.
+  # * `tags : Array(String | NamedTuple(name: String, priority: Int32?))` - Tags that should be assigned to the service.  Defaults to an empty array.  See the [Tagging Services](./Register.html#tagging-services) example for more information.
   #
   # ## Examples
   #
@@ -191,7 +191,8 @@ module Athena::DependencyInjection
   #
   # ### Aliasing Services
   #
-  # An important part of DI is building against interfaces as opposed to concrete types.  This allows a type to depend upon abstractions rather than a specific implementation of the interface.  Or in other works, prevents a singular implementation from being tightly coupled with another type.
+  # An important part of DI is building against interfaces as opposed to concrete types.  This allows a type to depend upon abstractions rather than a specific implementation of the interface.
+  # Or in other words, prevents a singular implementation from being tightly coupled with another type.
   #
   # We can use the `alias` argument when registering a service to tell the container that it should inject this service when a type restriction for the aliased service is found.
   #
@@ -318,17 +319,12 @@ module Athena::DependencyInjection
   # @[ADI::Register(_id: 3, name: "yahoo", tags: [{name: "partner", priority: 10}])]
   # @[ADI::Register(_id: 4, name: "microsoft", tags: [PARTNER_TAG])]
   # # Register multiple services based on the same type.  Each service must give define a unique name.
-  # struct FeedPartner
-  #   getter id
-  #
-  #   def initialize(@id : Int32); end
-  # end
+  # record FeedPartner, id : Int32
   #
   # @[ADI::Register(_services: "!partner", public: true)]
   # # Inject all services with the `"partner"` tag into `self`.
   # class PartnerClient
-  #   def initialize(@services : Array(FeedPartner))
-  #   end
+  #   def initialize(@services : Array(FeedPartner)); end
   # end
   #
   # ADI.container.partner_client # =>
@@ -342,6 +338,7 @@ module Athena::DependencyInjection
   #
   # While tagged services cannot be injected automatically by default, the `Athena::DependencyInjection.bind` macro can be used to support it.  For example: `ADI.bind partners, "!partner"`.
   # This would now inject all services with the `partner` tagged when an argument named `partners` is encountered.
+  # A type restriction can also be added to the binding to allow reusing the name.  See the documentation for `Athena::DependencyInjection.bind` for an example.
   #
   # ### Optional Services
   #

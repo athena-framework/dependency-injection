@@ -13,6 +13,7 @@ Robust dependency injection service container framework.
 dependencies:
   athena-dependency_injection:
     github: athena-framework/dependency-injection
+    version: 0.2.0
 ```
 
 2. Run `shards install`
