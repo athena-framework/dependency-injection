@@ -120,10 +120,12 @@ describe Athena::DependencyInjection::ServiceContainer do
       end
 
       it "supports changing the visibility/laziness of a service" do
+        container = ADI::ServiceContainer.new
+
         ConfigFour.initialized?.should be_true
         ConfigFive.initialized?.should be_false
 
-        ADI.container.config_four.should be_a ConfigFour
+        container.config_four.should be_a ConfigFour
       end
     end
   end
