@@ -55,7 +55,7 @@ module Athena::DependencyInjection::Spec
   # ### Hybrid Mocks
   #
   # Dynamic and Global mocking can also be combined to allow having a default mock, but allow overriding if/when needed.
-  # This can be accomplished by adding bother a getter and setter to `self.`
+  # This can be accomplished by adding both a getter and setter to `self.`
   #
   # ```
   # class ADI::Spec::MockableServiceContainer
@@ -73,7 +73,7 @@ module Athena::DependencyInjection::Spec
   # # ...
   # ```
   #
-  # NOTE: Interface based services that will need to be mocked should use `type` argument as part of the `ADI::Register` annotation.
+  # NOTE: Services that need to be mockable should be based on interfaces and use `type` argument as part of the `ADI::Register` annotation.
   # This allows that service to be replaced (either dynamically or globally) with another type that implements that interface.
   class MockableServiceContainer < ADI::ServiceContainer; end
 end
