@@ -415,8 +415,8 @@ module Athena::DependencyInjection
   # end
   # ```
   #
-  # By specifing the `type` as `SomeInterface`, this changes the services representation in the service container to `@my_service : SomeInterface`,
-  # thus allowing the exact implemenation to be changed.  See `ADI::Spec::MockableServiceContainer` for more details.
+  # By specifying the `type` as `SomeInterface`, this changes the services representation in the service container to `@my_service : SomeInterface`,
+  # thus allowing the exact implementation to be changed.  See `ADI::Spec::MockableServiceContainer` for more details.
   annotation Register; end
 
   # Specifies which constructor should be used for injection.
