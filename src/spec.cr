@@ -15,8 +15,43 @@ module Athena::DependencyInjection::Spec
   # Service dependencies that interact with an external source, like a third party API or a database, should most likely be mocked out.
   # However your other services should be left as is in order to get the most benefit from the test.
   #
+  # ## Mocking
+  #
   # The `ADI::ServiceContainer` is nothing more than a normal Crystal class with some instance variables and methods.
   # As such, mocking services is as easy as monkey patching `self` with the mocked versions, assuming of course they are of a compatible type.
+  #
+  # Given Crystal's lack of a robust mocking shard, it isn't as straightforward as other languages.
+  # The best way at the moment is either using inheritance or interfaces (modules) to manually create a concrete test class/struct;
+  # with the latter option being preferred as it would work for both structs and classes.
+  #
+  # For example, we can create a mock implementation of a type by extending it:
+  # ```
+  # class MockMyService < MyService
+  #   def get_value
+  #     # Can now just return a static expected value.
+  #     # Test properties/constructor(s) can also be added to make it a bit more generic.
+  #     1234
+  #   end
+  # end
+  # ```
+  #
+  # Because our mock extends `MyService`, it is a compatible type for anything typed as `MyService`.
+  #
+  # Another way to handle mocking is via interfaces (modules).
+  #
+  # ```
+  # module SomeInterface; end
+  #
+  # struct MockMyService
+  #   include SomeInterface
+  # end
+  # ```
+  #
+  # Because our mock implements `SomeInterface`, it is a compatible type for anything typed as `SomeInterface`.
+  #
+  # NOTE: Service mocks do not need to registered as services themselves since they will need to be configured manually.
+  # NOTE: The `type` argument as part of the `ADI::Register` annotation can be used to set the type of a service within the container.
+  # See `ADI::Register@customizing-services-type` for more details.
   #
   # ### Dynamic Mocks
   #
@@ -72,8 +107,5 @@ module Athena::DependencyInjection::Spec
   #
   # # ...
   # ```
-  #
-  # NOTE: Services that need to be mockable should be based on interfaces and use `type` argument as part of the `ADI::Register` annotation.
-  # This allows that service to be replaced (either dynamically or globally) with another type that implements that interface.
   class MockableServiceContainer < ADI::ServiceContainer; end
 end
