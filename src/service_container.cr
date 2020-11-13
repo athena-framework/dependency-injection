@@ -44,7 +44,7 @@ class Athena::DependencyInjection::ServiceContainer
               {% service.raise "Failed to register service '#{service_id.id}'.  Expected #{service.type_vars.size} generics types got #{generics.size}." %}
             {% end %}
 
-            {% if ann && ann[:alias] != nil %}
+            {% if ann[:alias] != nil %}
               {% alias_hash[ann[:alias].resolve] = service_id %}
             {% end %}
 
@@ -70,18 +70,40 @@ class Athena::DependencyInjection::ServiceContainer
                  end %}
             {% end %}
 
-              {%
-                service_hash[service_id] = {
-                  generics:           generics,
-                  lazy:               ann[:lazy] != nil ? ann[:lazy] : (auto_configuration[:lazy] != nil ? auto_configuration[:lazy] : true),
-                  public:             ann[:public] != nil ? ann[:public] : (auto_configuration[:public] != nil ? auto_configuration[:public] : false),
-                  public_alias:       ann[:public_alias] != nil ? ann[:public_alias] : false,
-                  service_annotation: ann,
-                  tags:               tags,
-                  service:            service.resolve,
-                  ivar_type:          ann[:type] || service.resolve,
-                }
-              %}
+            {% factory = nil %}
+
+            {% if factory_ann = ann[:factory] %}
+              {% factory = if factory_ann.is_a? StringLiteral
+                             {service.resolve, factory_ann}
+                           elsif factory_ann.is_a? TupleLiteral
+                             {factory_ann[0].resolve, factory_ann[1]}
+                           end %}
+
+              # Validate the factory method exists and is a class method
+              {% if factory %}
+                {% klass = factory[0] %}
+                {% method = factory[1] %}
+
+                {% raise "Failed to register service `#{service_id.id}`.  Factory method `#{method.id}` within `#{klass}` is an instance method." if klass.instance.has_method? method %}
+                {% raise "Failed to register service `#{service_id.id}`.  Factory method `#{method.id}` within `#{klass}` does not exist." unless klass.class.has_method? method %}
+              {% end %}
+            {% end %}
+
+            {%
+              service_hash[service_id] = {
+                generics:           generics,
+                lazy:               ann[:lazy] != nil ? ann[:lazy] : (auto_configuration[:lazy] != nil ? auto_configuration[:lazy] : true),
+                public:             ann[:public] != nil ? ann[:public] : (auto_configuration[:public] != nil ? auto_configuration[:public] : false),
+                public_alias:       ann[:public_alias] != nil ? ann[:public_alias] : false,
+                service_annotation: ann,
+                tags:               tags,
+
+                # If there is a factory set the service to that type so dependencies are resolved against the factory method
+                service:   factory ? factory.first : service.resolve,
+                ivar_type: ann[:type] || service.resolve,
+                factory:   factory,
+              }
+            %}
           {% end %}
         {% end %}
       {% end %}
@@ -90,7 +112,9 @@ class Athena::DependencyInjection::ServiceContainer
       {% for service_id, metadata in service_hash %}
         {% service_ann = metadata[:service_annotation] %}
         {% service = metadata[:service] %}
-        {% initializer = service.methods.find(&.annotation(ADI::Inject)) || service.methods.find(&.name.==("initialize")) %}
+
+        # If the service has a factory, resolve the factory method versus the default initializer
+        {% initializer = metadata[:factory] ? service.class.methods.find(&.name.==(metadata[:factory][1])) : service.methods.find(&.annotation(ADI::Inject)) || service.methods.find(&.name.==("initialize")) %}
         {% initializer_args = (i = initializer) ? i.args : [] of Nil %}
 
         {%
@@ -220,7 +244,15 @@ class Athena::DependencyInjection::ServiceContainer
         {% service = metadata[:generics].empty? ? metadata[:service] : generics_type %}
         {% ivar_type = metadata[:generics].empty? ? metadata[:ivar_type] : generics_type %}
 
-        {% if metadata[:public] != true %}private{% end %} getter {{service_id.id}} : {{ivar_type}} { {{service}}.new({{metadata[:arguments].splat}}) }
+        {% constructor_service = service %}
+        {% constructor_method = "new" %}
+
+        {% if factory = metadata[:factory] %}
+          {% constructor_service = factory[0] %}
+          {% constructor_method = factory[1] %}
+        {% end %}
+
+        {% if metadata[:public] != true %}private{% end %} getter {{service_id.id}} : {{ivar_type}} { {{constructor_service}}.{{constructor_method.id}}({{metadata[:arguments].splat}}) }
 
         {% if metadata[:public] %}
           def get(service : {{service}}.class) : {{service}}

@@ -159,6 +159,7 @@ module Athena::DependencyInjection
   # * `alias : T` - Injects `self` when this type is used as a type restriction.  See the Aliasing Services example for more information.
   # * `tags : Array(String | NamedTuple(name: String, priority: Int32?))` - Tags that should be assigned to the service.  Defaults to an empty array.  See the [Tagging Services](./Register.html#tagging-services) example for more information.
   # * `type : T` - The type of the service within the container.  Defaults to service's types.  See the [Customizing Service's Type](#customizing-services-type) section.
+  # * `factory : String | Tuple(T, String)` - Use a factory type/method to create the service.  See the [Factories](#factories) section.
   #
   # ## Examples
   #
@@ -390,6 +391,58 @@ module Athena::DependencyInjection
   #
   # ADI.container.int_service.type   # => {Int32, Bool}
   # ADI.container.float_service.type # => {Float64, Bool}
+  # ```
+  #
+  # ### Factories
+  #
+  # In some cases it may be necessary to use the [factory design pattern](https://en.wikipedia.org/wiki/Factory_%28object-oriented_programming%29)
+  # to handle creating an object as opposed to creating the object directly.  In this case the `factory` argument can be used.
+  #
+  # Factory methods are class methods defined on some type; either the service itself or a different type.
+  # Arguments to the factory method are provided as they would if the service was being created directly.
+  # This includes auto resolved service dependencies, and scalar underscore based arguments included within the `ADI::Register` annotation.
+  #
+  # #### Same Type
+  #
+  # A `String` `factory` value denotes the method name that should be called on the service itself to create the service.
+  #
+  # ```
+  # # Calls `StringFactoryService.double` to create the service.
+  # @[ADI::Register(_value: 10, public: true, factory: "double")]
+  # class StringFactoryService
+  #   getter value : Int32
+  #
+  #   def self.double(value : Int32) : self
+  #     new value * 2
+  #   end
+  #
+  #   def initialize(@value : Int32); end
+  # end
+  #
+  # ADI.container.string_factory_service.value # => 20
+  # ```
+  #
+  # #### Different Type
+  #
+  # A `Tuple` can also be provided as the `factory` value to allow using an external type's factory method to create the service.
+  # The first item represents the factory type to use, and the second item represents the method that should be called.
+  #
+  # ```
+  # class TestFactory
+  #   def self.create_tuple_service(value : Int32) : TupleFactoryService
+  #     TupleFactoryService.new value * 3
+  #   end
+  # end
+  #
+  # # Calls `TestFactory.create_tuple_service` to create the service.
+  # @[ADI::Register(_value: 10, public: true, factory: {TestFactory, "create_tuple_service"})]
+  # class TupleFactoryService
+  #   getter value : Int32
+  #
+  #   def initialize(@value : Int32); end
+  # end
+  #
+  # ADI.container.tuple_factory_service.value # => 30
   # ```
   #
   # ### Customizing Service's Type

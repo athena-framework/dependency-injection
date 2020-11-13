@@ -128,5 +128,19 @@ describe Athena::DependencyInjection::ServiceContainer do
         container.config_four.should be_a ConfigFour
       end
     end
+
+    describe "with factory based services" do
+      it "supports passing a tuple" do
+        ADI::ServiceContainer.new.factory_tuple.value.should eq 30
+      end
+
+      it "supports passing the string method name" do
+        ADI::ServiceContainer.new.factory_string.value.should eq 20
+      end
+
+      it "supports auto resolving factory method service depednecies" do
+        ADI::ServiceContainer.new.factory_service.value.should eq 10
+      end
+    end
   end
 end
