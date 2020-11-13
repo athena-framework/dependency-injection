@@ -41,7 +41,7 @@ end
 module TransformerInterface
 end
 
-@[ADI::Register(alias: TransformerInterface)]
+@[ADI::Register(alias: TransformerInterface, type: TransformerInterface, public: true)]
 struct ReverseTransformer
   include TransformerInterface
 end

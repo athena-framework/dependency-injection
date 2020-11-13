@@ -158,6 +158,7 @@ module Athena::DependencyInjection
   # * `lazy : Bool` - If the service should be lazily instantiated.  I.e. only instantiated when it is first accessed; either directly or as a dependency of another service.  Defaults to `true`.
   # * `alias : T` - Injects `self` when this type is used as a type restriction.  See the Aliasing Services example for more information.
   # * `tags : Array(String | NamedTuple(name: String, priority: Int32?))` - Tags that should be assigned to the service.  Defaults to an empty array.  See the [Tagging Services](./Register.html#tagging-services) example for more information.
+  # * `type : T` - The type of the service within the container.  Defaults to service's types.  See the [Customizing Service's Type](#customizing-services-type) section.
   #
   # ## Examples
   #
@@ -390,6 +391,32 @@ module Athena::DependencyInjection
   # ADI.container.int_service.type   # => {Int32, Bool}
   # ADI.container.float_service.type # => {Float64, Bool}
   # ```
+  #
+  # ### Customizing Service's Type
+  #
+  # By default when a service is registered, it is typed the same as the service, for example:
+  #
+  # ```
+  # @[ADI::Register]
+  # class MyService; end
+  # ```
+  #
+  # This service is essentially represented in the service container as `@my_service : MyService`.
+  # This is usually fine for most services, however there are some cases where the service's type should not be the concrete implementation.
+  # An example of this is if that service should be mockable in a test setting.  Mockable services should be typed to an interface that they implement
+  # in order to allow mock implementations to be used if needed.
+  #
+  # ```
+  # module SomeInterface; end
+  #
+  # @[ADI::Register(type: SomeInterface)]
+  # class MyService
+  #   include SomeInterface
+  # end
+  # ```
+  #
+  # By specifying the `type` as `SomeInterface`, this changes the services representation in the service container to `@my_service : SomeInterface`,
+  # thus allowing the exact implementation to be changed.  See `ADI::Spec::MockableServiceContainer` for more details.
   annotation Register; end
 
   # Specifies which constructor should be used for injection.

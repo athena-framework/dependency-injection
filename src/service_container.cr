@@ -78,7 +78,8 @@ class Athena::DependencyInjection::ServiceContainer
                   public_alias:       ann[:public_alias] != nil ? ann[:public_alias] : false,
                   service_annotation: ann,
                   tags:               tags,
-                  type:               service.resolve,
+                  service:            service.resolve,
+                  ivar_type:          ann[:type] || service.resolve,
                 }
               %}
           {% end %}
@@ -88,7 +89,7 @@ class Athena::DependencyInjection::ServiceContainer
       # Resolve the arguments for each service
       {% for service_id, metadata in service_hash %}
         {% service_ann = metadata[:service_annotation] %}
-        {% service = metadata[:type] %}
+        {% service = metadata[:service] %}
         {% initializer = service.methods.find(&.annotation(ADI::Inject)) || service.methods.find(&.name.==("initialize")) %}
         {% initializer_args = (i = initializer) ? i.args : [] of Nil %}
 
@@ -172,7 +173,7 @@ class Athena::DependencyInjection::ServiceContainer
 
               # Otherwise resolve possible services based on type
               service_hash.each do |id, s_metadata|
-                if (type = initializer_arg.restriction.resolve?) && s_metadata[:type] <= type
+                if (type = initializer_arg.restriction.resolve?) && s_metadata[:service] <= type
                   resolved_services << id
                 end
               end
@@ -214,12 +215,15 @@ class Athena::DependencyInjection::ServiceContainer
 
       # Define getters for each service, if the service is public, make the getter public and also define a type based getter
       {% for service_id, metadata in service_hash %}
-        {% type = metadata[:generics].empty? ? metadata[:type] : "#{metadata[:type].name(generic_args: false)}(#{metadata[:generics].splat})".id %}
+        {% generics_type = "#{metadata[:service].name(generic_args: false)}(#{metadata[:generics].splat})".id %}
 
-        {% if metadata[:public] != true %}private{% end %} getter {{service_id.id}} : {{type}} { {{type}}.new({{metadata[:arguments].splat}}) }
+        {% service = metadata[:generics].empty? ? metadata[:service] : generics_type %}
+        {% ivar_type = metadata[:generics].empty? ? metadata[:ivar_type] : generics_type %}
+
+        {% if metadata[:public] != true %}private{% end %} getter {{service_id.id}} : {{ivar_type}} { {{service}}.new({{metadata[:arguments].splat}}) }
 
         {% if metadata[:public] %}
-          def get(service : {{type}}.class) : {{type}}
+          def get(service : {{service}}.class) : {{service}}
             {{service_id.id}}
           end
         {% end %}
@@ -229,7 +233,7 @@ class Athena::DependencyInjection::ServiceContainer
       {% for service_type, service_id in alias_hash %}
         {% metadata = service_hash[service_id] %}
 
-        {% type = metadata[:generics].empty? ? metadata[:type] : "#{metadata[:type].name(generic_args: false)}(#{metadata[:generics].splat})".id %}
+        {% type = metadata[:generics].empty? ? metadata[:service] : "#{metadata[:service].name(generic_args: false)}(#{metadata[:generics].splat})".id %}
 
         {% if metadata[:public_alias] != true %}private{% end %} def {{service_type.name.gsub(/::/, "_").underscore.id}} : {{type}}; {{service_id.id}}; end
 
