@@ -287,3 +287,44 @@ record ConfigClient, configs : Array(ConfigInterface)
 
 ADI.auto_configure ConfigInterface, {tags: ["config"]}
 ADI.auto_configure ConfigFour, {public: true, lazy: false}
+
+#############
+# FACTORIES #
+#############
+class TestFactory
+  def self.create_factory_tuple(value : Int32) : FactoryTuple
+    FactoryTuple.new value * 3
+  end
+
+  def self.create_factory_service(value_provider : ValueProvider) : FactoryService
+    FactoryService.new value_provider.value
+  end
+end
+
+@[ADI::Register(_value: 10, public: true, factory: {TestFactory, "create_factory_tuple"})]
+class FactoryTuple
+  getter value : Int32
+
+  def initialize(@value : Int32); end
+end
+
+@[ADI::Register(_value: 10, public: true, factory: "double")]
+class FactoryString
+  getter value : Int32
+
+  def self.double(value : Int32) : self
+    new value * 2
+  end
+
+  def initialize(@value : Int32); end
+end
+
+@[ADI::Register]
+record ValueProvider, value : Int32 = 10
+
+@[ADI::Register(public: true, factory: {TestFactory, "create_factory_service"})]
+class FactoryService
+  getter value : Int32
+
+  def initialize(@value : Int32); end
+end

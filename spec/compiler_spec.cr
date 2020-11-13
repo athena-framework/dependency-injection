@@ -22,6 +22,14 @@ private TEST_CASES = {
     "Failed to auto register service 'klass'.  Could not resolve argument 'service : MissingService'.",
   },
   {
+    "factory_instance_method",
+    "Failed to register service `klass`.  Factory method `double` within `Klass` is an instance method.",
+  },
+  {
+    "factory_missing_method",
+    "Failed to register service `klass`.  Factory method `double` within `Klass` does not exist.",
+  },
+  {
     # Service based on type that has multiple generic arguments does not provide the correct amount of generic arguments
     "generic_service_generics_count_mismatch",
     "Failed to register service 'generic_service'.  Expected 2 generics types got 1.",
