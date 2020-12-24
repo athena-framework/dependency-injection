@@ -150,10 +150,26 @@ struct ArrayClient
   def initialize(@services : Array(ArrayInterface?)); end
 end
 
+@[ADI::Register(_values: [1, 2, 3], public: true)]
+struct ArrayValueDefaultClient
+  getter values
+  getter status
+
+  def initialize(
+    @values : Array(Int32),
+    @status : Status = Status::Active
+  ); end
+end
+
 ##################
 # TAGGED SERVICE #
 ##################
 private PARTNER_TAG = "partner"
+
+enum Status
+  Active
+  Inactive
+end
 
 @[ADI::Register(_id: 1, name: "google", tags: [{name: PARTNER_TAG, priority: 5}])]
 @[ADI::Register(_id: 2, name: "facebook", tags: [PARTNER_TAG])]
@@ -170,6 +186,18 @@ class PartnerClient
   getter services
 
   def initialize(@services : Array(FeedPartner))
+  end
+end
+
+@[ADI::Register(_services: "!partner", public: true)]
+class PartnerNamedDefaultClient
+  getter services
+  getter status
+
+  def initialize(
+    @services : Array(FeedPartner),
+    @status : Status = Status::Active
+  )
   end
 end
 
@@ -243,6 +271,16 @@ record IntArrClient, values : Array(Int32)
 
 @[ADI::Register(public: true)]
 record StrArrClient, values : Array(String)
+
+@[ADI::Register(public: true)]
+record IntArrDefaultClient,
+  values : Array(Int32),
+  status : Status = Status::Active
+
+@[ADI::Register(public: true)]
+record PrimeArrDefaultClient,
+  prime_values : Array(ValueInterface),
+  status : Status = Status::Active
 
 ######################
 # AUTO CONFIGURATION #
