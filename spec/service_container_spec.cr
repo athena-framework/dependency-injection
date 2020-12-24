@@ -76,6 +76,12 @@ describe Athena::DependencyInjection::ServiceContainer do
         services[0].should be_a ArrayService
         services[1].should be_a API::Models::NestedArrayService
       end
+
+      it "also allows the service to still have defaults after the array argument" do
+        service = ADI.container.array_value_default_client
+        service.values.size.should eq 3
+        service.status.should eq Status::Active
+      end
     end
 
     describe "that is tag based" do
@@ -85,6 +91,12 @@ describe Athena::DependencyInjection::ServiceContainer do
         services[1].id.should eq 1
         services[2].id.should eq 2
         services[3].id.should eq 4
+      end
+
+      it "also allows the service to still have defaults after the tagged services argument" do
+        service = ADI.container.partner_named_default_client
+        service.services.size.should eq 4
+        service.status.should eq Status::Active
       end
     end
 
@@ -108,6 +120,18 @@ describe Athena::DependencyInjection::ServiceContainer do
         service = ADI.container.typed_binding_client
         service.debug.should eq 0
         service.typed_value.should eq "bar"
+      end
+
+      it "allows the service to still have defaults after the bound array argument" do
+        service = ADI.container.int_arr_default_client
+        service.values.size.should eq 3
+        service.status.should eq Status::Active
+      end
+
+      it "allows the service to still have defaults after the bound array argument" do
+        service = ADI.container.prime_arr_default_client
+        service.prime_values.size.should eq 2
+        service.status.should eq Status::Active
       end
     end
 

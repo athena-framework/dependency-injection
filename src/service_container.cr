@@ -136,7 +136,7 @@ class Athena::DependencyInjection::ServiceContainer
                   end
                 end
 
-                %(#{inner_args} of Union(#{initializer_arg.restriction.resolve.type_vars.splat})).id
+                %((#{inner_args} of Union(#{initializer_arg.restriction.resolve.type_vars.splat}))).id
               elsif named_arg.is_a?(StringLiteral) && named_arg.starts_with?('!')
                 tagged_services = [] of Nil
 
@@ -150,7 +150,7 @@ class Athena::DependencyInjection::ServiceContainer
                 # Sort based on tag priority.  Services without a priority will be last in order of definition
                 tagged_services = tagged_services.sort_by { |item| -(item[1][:priority] || 0) }
 
-                %(#{tagged_services.map(&.first)} of Union(#{initializer_args[idx].restriction.resolve.type_vars.splat})).id
+                %((#{tagged_services.map(&.first)} of Union(#{initializer_args[idx].restriction.resolve.type_vars.splat}))).id
               else
                 named_arg
               end
@@ -174,7 +174,7 @@ class Athena::DependencyInjection::ServiceContainer
                   end
                 end
 
-                %(#{inner_binding_args} of Union(#{initializer_arg.restriction.resolve.type_vars.splat})).id
+                %((#{inner_binding_args} of Union(#{initializer_arg.restriction.resolve.type_vars.splat}))).id
               elsif binding_value.is_a?(StringLiteral) && binding_value.starts_with?('!')
                 tagged_services = [] of Nil
 
@@ -188,7 +188,7 @@ class Athena::DependencyInjection::ServiceContainer
                 # Sort based on tag priority.  Services without a priority will be last in order of definition
                 tagged_services = tagged_services.sort_by { |item| -(item[1][:priority] || 0) }
 
-                %(#{tagged_services.map(&.first)} of Union(#{initializer_args[idx].restriction.resolve.type_vars.splat})).id
+                %((#{tagged_services.map(&.first)} of Union(#{initializer_args[idx].restriction.resolve.type_vars.splat}))).id
               else
                 binding_value
               end
