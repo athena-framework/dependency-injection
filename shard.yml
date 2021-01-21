@@ -1,6 +1,6 @@
 name: athena-dependency_injection
 
-version: 0.2.3
+version: 0.2.4
 
 crystal: '>= 0.35.0'
 
@@ -15,6 +15,11 @@ description: |
 
 authors:
   - George Dietrich <george@dietrich.app>
+
+dependencies:
+  athena-config:
+    github: athena-framework/config
+    branch: refactor
 
 development_dependencies:
   ameba:
