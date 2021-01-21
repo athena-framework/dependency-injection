@@ -25,3 +25,6 @@ development_dependencies:
   ameba:
     github: crystal-ameba/ameba
     version: ~> 0.13.0
+  athena-spec:
+    github: athena-framework/spec
+    version: ~> 0.2.3

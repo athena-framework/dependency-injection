@@ -2,13 +2,19 @@ require "spec"
 require "../src/athena-dependency_injection"
 require "./service_mocks"
 
+require "athena-spec"
 require "../src/spec"
 
-# Asserts compile time errors given a *path* to a program and a *message*.
-def assert_error(path : String, message : String) : Nil
-  buffer = IO::Memory.new
-  result = Process.run("crystal", ["run", "--no-color", "--no-codegen", "spec/#{path}"], error: buffer)
-  fail buffer.to_s if result.success?
-  buffer.to_s.should contain message
-  buffer.close
+include ASPEC::Methods
+
+record DBConfig, username : String, password : String, host : String
+
+class ACF::Parameters
+  getter db : DBConfig
+
+  def initialize(@db : DBConfig); end
+end
+
+def ACF.load_parameters : ACF::Parameters
+  ACF::Parameters.new DBConfig.new "USER", "PASS", "HOST"
 end

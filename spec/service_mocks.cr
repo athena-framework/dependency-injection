@@ -420,3 +420,15 @@ class ServiceOne
     @service_two.value
   end
 end
+
+###############
+# PARAMETERES #
+###############
+
+ADI.bind password, "%db.password%"
+
+@[ADI::Register(_username: "%db.username%", _credentials: ["%db.username%", "%db.host%"], public: true)]
+record ParameterClient,
+  username : String,
+  password : String,
+  credentials : Array(String)

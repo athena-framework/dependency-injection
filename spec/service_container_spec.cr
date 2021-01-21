@@ -210,5 +210,12 @@ describe Athena::DependencyInjection::ServiceContainer do
         service.namespaced_service.service_type.should eq Some::Namespace::Service
       end
     end
+
+    it "with parameters" do
+      service = ADI::ServiceContainer.new.parameter_client
+      service.username.should eq "USER"
+      service.password.should eq "PASS"
+      service.credentials.should eq ["USER", "HOST"]
+    end
   end
 end
