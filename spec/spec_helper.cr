@@ -10,11 +10,5 @@ include ASPEC::Methods
 record DBConfig, username : String, password : String, host : String
 
 class ACF::Parameters
-  getter db : DBConfig
-
-  def initialize(@db : DBConfig); end
-end
-
-def ACF.load_parameters : ACF::Parameters
-  ACF::Parameters.new DBConfig.new "USER", "PASS", "HOST"
+  getter db : DBConfig = DBConfig.new "USER", "PASS", "HOST"
 end
