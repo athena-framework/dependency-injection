@@ -1,4 +1,6 @@
+require "./proxy"
 require "./service_container"
+
 require "compiler/crystal/macros"
 
 # :nodoc:
@@ -28,8 +30,6 @@ module Athena::DependencyInjection
   #
   # A common use case of this would be to apply a specific tag to all instances of an interface; thus preventing the need to manually apply the tag for each implementation.
   # This can be paired with `Athena::DependencyInjection.bind` to make working with tags easier.
-  #
-  # It can also be used to set the `public` and `lazy` options.
   #
   # ### Example
   #
@@ -155,7 +155,6 @@ module Athena::DependencyInjection
   # * `name : String`- The name of the service.  Should be unique.  Defaults to the type's FQN snake cased.
   # * `public : Bool` - If the service should be directly accessible from the container.  Defaults to `false`.
   # * `public_alias : Bool` - If a service should be directly accessible from the container via an alias.  Defaults to `false`.
-  # * `lazy : Bool` - If the service should be lazily instantiated.  I.e. only instantiated when it is first accessed; either directly or as a dependency of another service.  Defaults to `true`.
   # * `alias : T` - Injects `self` when this type is used as a type restriction.  See the Aliasing Services example for more information.
   # * `tags : Array(String | NamedTuple(name: String, priority: Int32?))` - Tags that should be assigned to the service.  Defaults to an empty array.  See the [Tagging Services](./Register.html#tagging-services) example for more information.
   # * `type : T` - The type of the service within the container.  Defaults to service's types.  See the [Customizing Service's Type](#customizing-services-type) section.

@@ -92,7 +92,6 @@ class Athena::DependencyInjection::ServiceContainer
             {%
               service_hash[service_id] = {
                 generics:           generics,
-                lazy:               ann[:lazy] != nil ? ann[:lazy] : (auto_configuration[:lazy] != nil ? auto_configuration[:lazy] : true),
                 public:             ann[:public] != nil ? ann[:public] : (auto_configuration[:public] != nil ? auto_configuration[:public] : false),
                 public_alias:       ann[:public_alias] != nil ? ann[:public_alias] : false,
                 service_annotation: ann,
@@ -150,6 +149,12 @@ class Athena::DependencyInjection::ServiceContainer
                 # Sort based on tag priority.  Services without a priority will be last in order of definition
                 tagged_services = tagged_services.sort_by { |item| -(item[1][:priority] || 0) }
 
+                if initializer_arg.restriction.type_vars.first.resolve < ADI::Proxy
+                  tagged_services = tagged_services.map do |ts|
+                    {"ADI::Proxy.new(->#{ts[0]})".id}
+                  end
+                end
+
                 %((#{tagged_services.map(&.first)} of Union(#{initializer_args[idx].restriction.resolve.type_vars.splat}))).id
               else
                 named_arg
@@ -157,7 +162,8 @@ class Athena::DependencyInjection::ServiceContainer
             elsif (bindings = BINDINGS[initializer_arg.name.stringify]) && # Check if there are any bindings defined for this argument
                   (
                     (binding = bindings[:typed].find &.[:type].<=(initializer_arg.restriction.resolve)) || # First try resolving it via a typed bindings since they are more specific
-                    (binding = bindings[:untyped].first)                                                   # Otherwise fallback on last defined untyped binding (they're pushed in reverse order)
+                    # ((type = initializer_arg.restriction.resolve) && type < ADI::Proxy && (binding = bindings[:typed].find &.[:type].<=(type))) ||
+                    (binding = bindings[:untyped].first) # Otherwise fallback on last defined untyped binding (they're pushed in reverse order)
                   )
               binding_value = binding[:value]
 
@@ -168,7 +174,13 @@ class Athena::DependencyInjection::ServiceContainer
                   elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?('@')
                     service_name = arr_arg[1..-1]
                     raise "Failed to register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}' from binding value '#{binding_value}'." unless service_hash[service_name]
-                    service_name.id
+
+                    # using an ADI::Proxy object if thats what the initializer expects.
+                    if initializer_arg.restriction.type_vars.first.resolve < ADI::Proxy
+                      "ADI::Proxy.new(->#{service_name.id})".id
+                    else
+                      service_name.id
+                    end
                   else
                     arr_arg
                   end
@@ -188,6 +200,12 @@ class Athena::DependencyInjection::ServiceContainer
                 # Sort based on tag priority.  Services without a priority will be last in order of definition
                 tagged_services = tagged_services.sort_by { |item| -(item[1][:priority] || 0) }
 
+                if initializer_arg.restriction.type_vars.first.resolve < ADI::Proxy
+                  tagged_services = tagged_services.map do |ts|
+                    {"ADI::Proxy.new(->#{ts[0]})".id}
+                  end
+                end
+
                 %((#{tagged_services.map(&.first)} of Union(#{initializer_args[idx].restriction.resolve.type_vars.splat}))).id
               else
                 binding_value
@@ -197,7 +215,11 @@ class Athena::DependencyInjection::ServiceContainer
 
               # Otherwise resolve possible services based on type
               service_hash.each do |id, s_metadata|
-                if (type = initializer_arg.restriction.resolve?) && s_metadata[:service] <= type
+                if (type = initializer_arg.restriction.resolve?) &&
+                   (
+                     s_metadata[:service] <= type ||
+                     (type < ADI::Proxy && s_metadata[:service] <= type.type_vars.first.resolve)
+                   )
                   resolved_services << id
                 end
               end
@@ -215,16 +237,32 @@ class Athena::DependencyInjection::ServiceContainer
                   initializer_arg.raise "Failed to auto register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}'."
                 end
               elsif resolved_services.size == 1
-                # If only one was matched, return it
-                resolved_services[0].id
+                # If only one was matched, return it,
+                # using an ADI::Proxy object if thats what the initializer expects.
+                if initializer_arg.restriction.resolve < ADI::Proxy
+                  "ADI::Proxy.new(->#{resolved_services[0].id.id})".id
+                else
+                  resolved_services[0].id
+                end
               else
                 # Otherwise fallback on the argument's name as well
                 if resolved_service = resolved_services.find(&.==(initializer_arg.name))
-                  resolved_service.id
+                  # use an ADI::Proxy object if thats what the initializer expects.
+                  if initializer_arg.restriction.resolve < ADI::Proxy
+                    "ADI::Proxy.new(->#{resolved_service.id})".id
+                  else
+                    resolved_service.id
+                  end
+
                   # If no service with that name could be resolved, check the alias map for the restriction
-                elsif aliased_service = alias_hash[initializer_arg.restriction.resolve]
+                elsif aliased_service = alias_hash[(initializer_arg.restriction.resolve < ADI::Proxy ? initializer_arg.restriction.type_vars.first.resolve : initializer_arg.restriction.resolve)]
                   # If one is found returned the aliased service
-                  aliased_service.id
+                  # use an ADI::Proxy object if thats what the initializer expects.
+                  if initializer_arg.restriction.resolve < ADI::Proxy
+                    "ADI::Proxy.new(->#{aliased_service.id})".id
+                  else
+                    aliased_service.id
+                  end
                 else
                   # Otherwise raise an exception
                   initializer_arg.raise "Failed to auto register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}'."
@@ -280,13 +318,6 @@ class Athena::DependencyInjection::ServiceContainer
       def initialize
         # Work around for https://github.com/crystal-lang/crystal/issues/7975
         {{@type}}
-
-        # Initialize non lazy services
-        {% for service_id, metadata in service_hash %}
-          {% unless metadata[:lazy] == true %}
-            @{{service_id.id}} = {{service_id.id}}
-          {% end %}
-        {% end %}
       end
     {% end %}
   end

@@ -133,6 +133,13 @@ describe Athena::DependencyInjection::ServiceContainer do
         service.prime_values.size.should eq 2
         service.status.should eq Status::Active
       end
+
+      it "allows converting bound value into a proxy" do
+        service = ADI.container.proxy_bound_client
+        service.prime_values.should eq [ValueService.new(2), ValueService.new(3)]
+        service.odd_values.should eq [ValueService.new(1), ValueService.new(3)]
+        service.typed_prime_values.should eq [ValueService.new(2), ValueService.new(3)]
+      end
     end
 
     describe "with auto configured services" do
@@ -143,13 +150,8 @@ describe Athena::DependencyInjection::ServiceContainer do
         services[1].should be_a ConfigTwo
       end
 
-      it "supports changing the visibility/laziness of a service" do
-        container = ADI::ServiceContainer.new
-
-        ConfigFour.initialized?.should be_true
-        ConfigFive.initialized?.should be_false
-
-        container.config_four.should be_a ConfigFour
+      it "supports changing the visibility of a service" do
+        ADI::ServiceContainer.new.config_four.should be_a ConfigFour
       end
     end
 

@@ -249,6 +249,9 @@ ADI.bind mixed_type_value : Bool, true
 ADI.bind mixed_type_value, 2
 ADI.bind mixed_type_value, 1
 
+# Proxy binding with interface type restriction
+ADI.bind typed_prime_values : Array(ADI::Proxy(ValueService)), "!prime_value"
+
 @[ADI::Register(public: true)]
 record TypedBindingClient,
   debug : Int32 | Bool,
@@ -282,9 +285,16 @@ record PrimeArrDefaultClient,
   prime_values : Array(ValueInterface),
   status : Status = Status::Active
 
+@[ADI::Register(public: true)]
+record ProxyBoundClient,
+  prime_values : Array(ADI::Proxy(ValueService)),      # Bound tag
+  odd_values : Array(ADI::Proxy(ValueService)),        # Bound array
+  typed_prime_values : Array(ADI::Proxy(ValueService)) # Bound tag with restriction
+
 ######################
 # AUTO CONFIGURATION #
 ######################
+
 module ConfigInterface; end
 
 @[ADI::Register]
@@ -304,27 +314,13 @@ end
 
 @[ADI::Register]
 struct ConfigFour
-  class_getter? initialized : Bool = false
-
-  def initialize
-    @@initialized = true
-  end
-end
-
-@[ADI::Register]
-struct ConfigFive
-  class_getter? initialized : Bool = false
-
-  def initialize
-    @@initialized = true
-  end
 end
 
 @[ADI::Register(_configs: "!config", public: true)]
 record ConfigClient, configs : Array(ConfigInterface)
 
 ADI.auto_configure ConfigInterface, {tags: ["config"]}
-ADI.auto_configure ConfigFour, {public: true, lazy: false}
+ADI.auto_configure ConfigFour, {public: true}
 
 #############
 # FACTORIES #
