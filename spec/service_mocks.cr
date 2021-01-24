@@ -345,6 +345,7 @@ ADI.auto_configure ConfigFour, {public: true}
 #############
 # FACTORIES #
 #############
+
 class TestFactory
   def self.create_factory_tuple(value : Int32) : FactoryTuple
     FactoryTuple.new value * 3
@@ -386,6 +387,7 @@ end
 ###########
 # PROXIES #
 ###########
+
 @[ADI::Register]
 class ServiceTwo
   class_getter? instantiated : Bool = false
@@ -424,7 +426,6 @@ end
 ###############
 # PARAMETERES #
 ###############
-
 ADI.bind password, "%db.password%"
 
 @[ADI::Register(_username: "%db.username%", _credentials: ["%db.username%", "%db.host%"], public: true)]
