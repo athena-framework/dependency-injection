@@ -39,16 +39,23 @@ end
 # MULTIPLE TYPE #
 #################
 module TransformerInterface
+  abstract def transform
 end
 
 @[ADI::Register(alias: TransformerInterface, type: TransformerInterface, public: true)]
 struct ReverseTransformer
   include TransformerInterface
+
+  def transform
+  end
 end
 
 @[ADI::Register]
 struct ShoutTransformer
   include TransformerInterface
+
+  def transform
+  end
 end
 
 @[ADI::Register(public: true)]
@@ -66,6 +73,17 @@ class TransformerAliasNameClient
 
   def initialize(shout_transformer : TransformerInterface)
     @service = shout_transformer
+  end
+end
+
+@[ADI::Register(public: true)]
+class ProxyTransformerAliasClient
+  getter service_one, shout_transformer
+
+  def initialize(
+    @service_one : ADI::Proxy(TransformerInterface),
+    @shout_transformer : ADI::Proxy(ShoutTransformer)
+  )
   end
 end
 
@@ -201,6 +219,9 @@ class PartnerNamedDefaultClient
   end
 end
 
+@[ADI::Register(_services: "!partner", public: true)]
+record ProxyTagClient, services : Array(ADI::Proxy(FeedPartner))
+
 ############
 # BINDINGS #
 ############
@@ -288,7 +309,6 @@ record PrimeArrDefaultClient,
 @[ADI::Register(public: true)]
 record ProxyBoundClient,
   prime_values : Array(ADI::Proxy(ValueService)),      # Bound tag
-  odd_values : Array(ADI::Proxy(ValueService)),        # Bound array
   typed_prime_values : Array(ADI::Proxy(ValueService)) # Bound tag with restriction
 
 ######################
@@ -361,4 +381,33 @@ class FactoryService
   getter value : Int32
 
   def initialize(@value : Int32); end
+end
+
+###########
+# PROXIES #
+###########
+@[ADI::Register]
+class ServiceTwo
+  class_getter? instantiated : Bool = false
+  getter value = 123
+
+  def initialize
+    @@instantiated = true
+  end
+end
+
+@[ADI::Register(public: true)]
+class ServiceOne
+  getter service_two : ADI::Proxy(ServiceTwo)
+
+  def initialize(@service_two : ADI::Proxy(ServiceTwo))
+  end
+
+  def test
+    1 + 1
+  end
+
+  def run
+    @service_two.value
+  end
 end

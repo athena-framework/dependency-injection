@@ -174,13 +174,7 @@ class Athena::DependencyInjection::ServiceContainer
                   elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?('@')
                     service_name = arr_arg[1..-1]
                     raise "Failed to register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}' from binding value '#{binding_value}'." unless service_hash[service_name]
-
-                    # using an ADI::Proxy object if thats what the initializer expects.
-                    if initializer_arg.restriction.type_vars.first.resolve < ADI::Proxy
-                      "ADI::Proxy.new(->#{service_name.id})".id
-                    else
-                      service_name.id
-                    end
+                    service_name.id
                   else
                     arr_arg
                   end
