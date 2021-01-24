@@ -2,6 +2,8 @@
 # See the "Service Proxies" section within `ADI::Register`.
 struct Athena::DependencyInjection::Proxy(O)
   forward_missing_to self.instance
+
+  # :nodoc:
   delegate :==, :===, :=~, :hash, :tap, :not_nil!, :dup, :clone, :try, to: self.instance
 
   # Returns proxied service `O`; instantiating it if it has not already been.
