@@ -23,11 +23,23 @@ describe Athena::DependencyInjection::ServiceContainer do
         it "allows overriding aliases" do
           ADI.container.get(ConverterInterface).should be_a ConverterTwo
         end
+
+        it "converts the aliased service into a proxy if desired" do
+          service = ADI.container.proxy_transformer_alias_client
+          service.service_one.should be_a ADI::Proxy(TransformerInterface)
+          service.service_one.instance.should be_a ReverseTransformer
+        end
       end
 
       describe "variable name matches a service" do
         it "should inject the service whose ID matches the name of the constructor variable" do
           ADI.container.transformer_alias_name_client.service.should be_a ShoutTransformer
+        end
+
+        it "converts the aliased service into a proxy if desired" do
+          service = ADI.container.proxy_transformer_alias_client
+          service.shout_transformer.should be_a ADI::Proxy(ShoutTransformer)
+          service.shout_transformer.instance.should be_a ShoutTransformer
         end
       end
     end
@@ -98,6 +110,14 @@ describe Athena::DependencyInjection::ServiceContainer do
         service.services.size.should eq 4
         service.status.should eq Status::Active
       end
+
+      it "converts each tagged service into a proxy" do
+        services = ADI.container.proxy_tag_client.services
+        services[0].id.should eq 3
+        services[1].id.should eq 1
+        services[2].id.should eq 2
+        services[3].id.should eq 4
+      end
     end
 
     describe "with bound values" do
@@ -133,6 +153,12 @@ describe Athena::DependencyInjection::ServiceContainer do
         service.prime_values.size.should eq 2
         service.status.should eq Status::Active
       end
+
+      it "allows converting bound tagged services into a proxy" do
+        service = ADI.container.proxy_bound_client
+        service.prime_values.should eq [ValueService.new(2), ValueService.new(3)]
+        service.typed_prime_values.should eq [ValueService.new(2), ValueService.new(3)]
+      end
     end
 
     describe "with auto configured services" do
@@ -143,13 +169,8 @@ describe Athena::DependencyInjection::ServiceContainer do
         services[1].should be_a ConfigTwo
       end
 
-      it "supports changing the visibility/laziness of a service" do
-        container = ADI::ServiceContainer.new
-
-        ConfigFour.initialized?.should be_true
-        ConfigFive.initialized?.should be_false
-
-        container.config_four.should be_a ConfigFour
+      it "supports changing the visibility of a service" do
+        ADI::ServiceContainer.new.config_four.should be_a ConfigFour
       end
     end
 
@@ -164,6 +185,29 @@ describe Athena::DependencyInjection::ServiceContainer do
 
       it "supports auto resolving factory method service depednecies" do
         ADI::ServiceContainer.new.factory_service.value.should eq 10
+      end
+    end
+
+    describe "with service proxies" do
+      it "delays instantiation until the proxy is used" do
+        service = ADI.container.service_one
+        ServiceTwo.instantiated?.should be_false
+        service.test
+        ServiceTwo.instantiated?.should be_false
+        service.run.should eq 123
+        ServiceTwo.instantiated?.should be_true
+      end
+
+      it "exposes the service ID and type of the proxied service" do
+        service = ADI.container.service_one
+        service.service_two_extra.service_id.should eq "service_two"
+        service.service_two_extra.service_type.should eq ServiceTwo
+        service.service_two_extra.instantiated?.should be_false
+        service.service_two_extra.value.should eq 123
+        service.service_two_extra.instantiated?.should be_true
+
+        service.namespaced_service.service_id.should eq "some_namespace_service"
+        service.namespaced_service.service_type.should eq Some::Namespace::Service
       end
     end
   end

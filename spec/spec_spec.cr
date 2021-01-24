@@ -2,6 +2,9 @@ require "./spec_helper"
 
 class FakeTransformer
   include TransformerInterface
+
+  def transform
+  end
 end
 
 class ADI::Spec::MockableServiceContainer

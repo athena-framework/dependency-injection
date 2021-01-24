@@ -1,4 +1,6 @@
+require "./proxy"
 require "./service_container"
+
 require "compiler/crystal/macros"
 
 # :nodoc:
@@ -28,8 +30,6 @@ module Athena::DependencyInjection
   #
   # A common use case of this would be to apply a specific tag to all instances of an interface; thus preventing the need to manually apply the tag for each implementation.
   # This can be paired with `Athena::DependencyInjection.bind` to make working with tags easier.
-  #
-  # It can also be used to set the `public` and `lazy` options.
   #
   # ### Example
   #
@@ -155,7 +155,6 @@ module Athena::DependencyInjection
   # * `name : String`- The name of the service.  Should be unique.  Defaults to the type's FQN snake cased.
   # * `public : Bool` - If the service should be directly accessible from the container.  Defaults to `false`.
   # * `public_alias : Bool` - If a service should be directly accessible from the container via an alias.  Defaults to `false`.
-  # * `lazy : Bool` - If the service should be lazily instantiated.  I.e. only instantiated when it is first accessed; either directly or as a dependency of another service.  Defaults to `true`.
   # * `alias : T` - Injects `self` when this type is used as a type restriction.  See the Aliasing Services example for more information.
   # * `tags : Array(String | NamedTuple(name: String, priority: Int32?))` - Tags that should be assigned to the service.  Defaults to an empty array.  See the [Tagging Services](./Register.html#tagging-services) example for more information.
   # * `type : T` - The type of the service within the container.  Defaults to service's types.  See the [Customizing Service's Type](#customizing-services-type) section.
@@ -341,6 +340,79 @@ module Athena::DependencyInjection
   # While tagged services cannot be injected automatically by default, the `Athena::DependencyInjection.bind` macro can be used to support it.  For example: `ADI.bind partners, "!partner"`.
   # This would now inject all services with the `partner` tagged when an argument named `partners` is encountered.
   # A type restriction can also be added to the binding to allow reusing the name.  See the documentation for `Athena::DependencyInjection.bind` for an example.
+  #
+  # ### Service Proxies
+  #
+  # In some cases, it may be a bit "heavy" to instantiate a service that may only be used occasionally.
+  # To solve this, a proxy of the service could be injected instead.
+  # The instantiation of proxied services are deferred until a method is called on it.
+  #
+  # A service is proxied by changing the type signature of the service to be of the `ADI::Proxy(T)` type, where `T` is the service to be proxied.
+  #
+  # ```
+  # @[ADI::Register]
+  # class ServiceTwo
+  #   getter value = 123
+  #
+  #   def initialize
+  #     pp "new s2"
+  #   end
+  # end
+  #
+  # @[ADI::Register(public: true)]
+  # class ServiceOne
+  #   getter service_two : ADI::Proxy(ServiceTwo)
+  #
+  #   # Tells `ADI` that a proxy of `ServiceTwo` should be injected.
+  #   def initialize(@service_two : ADI::Proxy(ServiceTwo))
+  #     pp "new s1"
+  #   end
+  #
+  #   def run
+  #     # At this point service_two hasn't been initialized yet.
+  #     pp "before value"
+  #
+  #     # First method interaction with the proxy instantiates the service and forwards the method to it.
+  #     pp @service_two.value
+  #   end
+  # end
+  #
+  # ADI.container.service_one.run
+  # # "new s1"
+  # # "before value"
+  # # "new s2"
+  # # 123
+  # ```
+  #
+  # #### Tagged Services Proxies
+  #
+  # Tagged services may also be injected as an array of proxy objects.
+  # This can be useful as an easy way to manage a collection of services where only one (or a small amount) will be used at a time.
+  #
+  # ```
+  # @[ADI::Register(_services: "!some_tag")]
+  # class SomeService
+  #   def initialize(@services : Array(ADI::Proxy(ServiceType)))
+  #   end
+  # end
+  # ```
+  #
+  # #### Proxy Metadata
+  #
+  # The `ADI::Proxy` object also exposes some metadata related to the proxied object; such as its name, type, and if it has been instantiated yet.
+  #
+  # For example, using `ServiceTwo`:
+  #
+  # ```
+  # # Assume this returns a `ADI::Proxy(ServiceTwo)`.
+  # proxy = ADI.container.service_two
+  #
+  # proxy.service_id    # => "service_two"
+  # proxy.service_type  # => ServiceTwo
+  # proxy.instantiated? # => false
+  # proxy.value         # => 123
+  # proxy.instantiated? # => true
+  # ```
   #
   # ### Optional Services
   #
