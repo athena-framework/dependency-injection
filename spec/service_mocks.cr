@@ -403,10 +403,12 @@ record Some::Namespace::Service
 class ServiceOne
   getter service_two : ADI::Proxy(ServiceTwo)
   getter namespaced_service : ADI::Proxy(Some::Namespace::Service)
+  getter service_two_extra : ADI::Proxy(ServiceTwo)
 
   def initialize(
     @service_two : ADI::Proxy(ServiceTwo),
-    @namespaced_service : ADI::Proxy(Some::Namespace::Service)
+    @namespaced_service : ADI::Proxy(Some::Namespace::Service),
+    @service_two_extra : ADI::Proxy(ServiceTwo)
   )
   end
 

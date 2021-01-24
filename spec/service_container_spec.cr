@@ -198,10 +198,14 @@ describe Athena::DependencyInjection::ServiceContainer do
         ServiceTwo.instantiated?.should be_true
       end
 
-      it "exposes the service ID of the proxied service" do
+      it "exposes the service ID and type of the proxied service" do
         service = ADI.container.service_one
-        service.service_two.service_id.should eq "service_two"
-        service.service_two.service_type.should eq ServiceTwo
+        service.service_two_extra.service_id.should eq "service_two"
+        service.service_two_extra.service_type.should eq ServiceTwo
+        service.service_two_extra.instantiated?.should be_false
+        service.service_two_extra.value.should eq 123
+        service.service_two_extra.instantiated?.should be_true
+
         service.namespaced_service.service_id.should eq "some_namespace_service"
         service.namespaced_service.service_type.should eq Some::Namespace::Service
       end
