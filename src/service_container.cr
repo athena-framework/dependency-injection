@@ -162,8 +162,7 @@ class Athena::DependencyInjection::ServiceContainer
             elsif (bindings = BINDINGS[initializer_arg.name.stringify]) && # Check if there are any bindings defined for this argument
                   (
                     (binding = bindings[:typed].find &.[:type].<=(initializer_arg.restriction.resolve)) || # First try resolving it via a typed bindings since they are more specific
-                    # ((type = initializer_arg.restriction.resolve) && type < ADI::Proxy && (binding = bindings[:typed].find &.[:type].<=(type))) ||
-                    (binding = bindings[:untyped].first) # Otherwise fallback on last defined untyped binding (they're pushed in reverse order)
+                    (binding = bindings[:untyped].first)                                                   # Otherwise fallback on last defined untyped binding (they're pushed in reverse order)
                   )
               binding_value = binding[:value]
 
