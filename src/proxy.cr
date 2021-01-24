@@ -4,5 +4,11 @@ struct Athena::DependencyInjection::Proxy(O)
 
   getter instance : O { @loader.call }
 
-  def initialize(@loader : Proc(O)); end
+  getter service_id : String
+
+  def initialize(@service_id : String, @loader : Proc(O)); end
+
+  def service_type : O.class
+    O
+  end
 end

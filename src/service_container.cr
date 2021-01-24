@@ -151,7 +151,7 @@ class Athena::DependencyInjection::ServiceContainer
 
                 if initializer_arg.restriction.type_vars.first.resolve < ADI::Proxy
                   tagged_services = tagged_services.map do |ts|
-                    {"ADI::Proxy.new(->#{ts[0]})".id}
+                    {"ADI::Proxy.new(#{ts[1][:name]}, ->#{ts[0]})".id}
                   end
                 end
 
@@ -195,7 +195,7 @@ class Athena::DependencyInjection::ServiceContainer
 
                 if initializer_arg.restriction.type_vars.first.resolve < ADI::Proxy
                   tagged_services = tagged_services.map do |ts|
-                    {"ADI::Proxy.new(->#{ts[0]})".id}
+                    {"ADI::Proxy.new(#{ts[1][:name]}, ->#{ts[0]})".id}
                   end
                 end
 
@@ -233,7 +233,7 @@ class Athena::DependencyInjection::ServiceContainer
                 # If only one was matched, return it,
                 # using an ADI::Proxy object if thats what the initializer expects.
                 if initializer_arg.restriction.resolve < ADI::Proxy
-                  "ADI::Proxy.new(->#{resolved_services[0].id.id})".id
+                  "ADI::Proxy.new(#{resolved_services[0]}, ->#{resolved_services[0].id.id})".id
                 else
                   resolved_services[0].id
                 end
@@ -242,7 +242,7 @@ class Athena::DependencyInjection::ServiceContainer
                 if resolved_service = resolved_services.find(&.==(initializer_arg.name))
                   # use an ADI::Proxy object if thats what the initializer expects.
                   if initializer_arg.restriction.resolve < ADI::Proxy
-                    "ADI::Proxy.new(->#{resolved_service.id})".id
+                    "ADI::Proxy.new(#{resolved_service}, ->#{resolved_service.id})".id
                   else
                     resolved_service.id
                   end
@@ -252,7 +252,7 @@ class Athena::DependencyInjection::ServiceContainer
                   # If one is found returned the aliased service
                   # use an ADI::Proxy object if thats what the initializer expects.
                   if initializer_arg.restriction.resolve < ADI::Proxy
-                    "ADI::Proxy.new(->#{aliased_service.id})".id
+                    "ADI::Proxy.new(#{aliased_service}, ->#{aliased_service.id})".id
                   else
                     aliased_service.id
                   end

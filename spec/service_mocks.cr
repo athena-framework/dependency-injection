@@ -396,11 +396,18 @@ class ServiceTwo
   end
 end
 
+@[ADI::Register]
+record Some::Namespace::Service
+
 @[ADI::Register(public: true)]
 class ServiceOne
   getter service_two : ADI::Proxy(ServiceTwo)
+  getter namespaced_service : ADI::Proxy(Some::Namespace::Service)
 
-  def initialize(@service_two : ADI::Proxy(ServiceTwo))
+  def initialize(
+    @service_two : ADI::Proxy(ServiceTwo),
+    @namespaced_service : ADI::Proxy(Some::Namespace::Service)
+  )
   end
 
   def test
