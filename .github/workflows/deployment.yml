@@ -15,7 +15,7 @@ jobs:
         run: apk add --update rsync
       - uses: actions/checkout@v2
       - name: Build
-        run: crystal docs src/athena-dependency_injection.cr src/spec.cr
+        run: crystal docs lib/athena-spec/src/athena-spec.cr lib/athena-config/src/athena-config.cr src/athena-dependency_injection.cr src/spec.cr
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@3.7.1
         with:

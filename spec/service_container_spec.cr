@@ -191,11 +191,11 @@ describe Athena::DependencyInjection::ServiceContainer do
     describe "with service proxies" do
       it "delays instantiation until the proxy is used" do
         service = ADI.container.service_one
-        ServiceTwo.instantiated?.should be_false
+        ServiceThree.instantiated?.should be_false
         service.test
-        ServiceTwo.instantiated?.should be_false
+        ServiceThree.instantiated?.should be_false
         service.run.should eq 123
-        ServiceTwo.instantiated?.should be_true
+        ServiceThree.instantiated?.should be_true
       end
 
       it "exposes the service ID and type of the proxied service" do
@@ -209,6 +209,13 @@ describe Athena::DependencyInjection::ServiceContainer do
         service.namespaced_service.service_id.should eq "some_namespace_service"
         service.namespaced_service.service_type.should eq Some::Namespace::Service
       end
+    end
+
+    it "with parameters" do
+      service = ADI::ServiceContainer.new.parameter_client
+      service.username.should eq "USER"
+      service.password.should eq "PASS"
+      service.credentials.should eq ["USER", "HOST"]
     end
   end
 end

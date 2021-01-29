@@ -130,6 +130,8 @@ class Athena::DependencyInjection::ServiceContainer
                     service_name = arr_arg[1..-1]
                     raise "Failed to register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}' from named argument value '#{named_arg}'." unless service_hash[service_name]
                     service_name.id
+                  elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?('%') && arr_arg.ends_with?('%')
+                    "ACF.parameters.#{arr_arg[1..-2].id}".id
                   else
                     arr_arg
                   end
@@ -156,6 +158,8 @@ class Athena::DependencyInjection::ServiceContainer
                 end
 
                 %((#{tagged_services.map(&.first)} of Union(#{initializer_args[idx].restriction.resolve.type_vars.splat}))).id
+              elsif named_arg.is_a?(StringLiteral) && named_arg.starts_with?('%') && named_arg.ends_with?('%')
+                "ACF.parameters.#{named_arg[1..-2].id}".id
               else
                 named_arg
               end
@@ -200,6 +204,8 @@ class Athena::DependencyInjection::ServiceContainer
                 end
 
                 %((#{tagged_services.map(&.first)} of Union(#{initializer_args[idx].restriction.resolve.type_vars.splat}))).id
+              elsif binding_value.is_a?(StringLiteral) && binding_value.starts_with?('%') && binding_value.ends_with?('%')
+                "ACF.parameters.#{binding_value[1..-2].id}".id
               else
                 binding_value
               end

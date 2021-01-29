@@ -345,6 +345,7 @@ ADI.auto_configure ConfigFour, {public: true}
 #############
 # FACTORIES #
 #############
+
 class TestFactory
   def self.create_factory_tuple(value : Int32) : FactoryTuple
     FactoryTuple.new value * 3
@@ -387,7 +388,7 @@ end
 # PROXIES #
 ###########
 @[ADI::Register]
-class ServiceTwo
+class ServiceThree
   class_getter? instantiated : Bool = false
   getter value = 123
 
@@ -397,16 +398,23 @@ class ServiceTwo
 end
 
 @[ADI::Register]
+class ServiceTwo
+  getter value = 123
+end
+
+@[ADI::Register]
 record Some::Namespace::Service
 
 @[ADI::Register(public: true)]
 class ServiceOne
   getter service_two : ADI::Proxy(ServiceTwo)
+  getter service_three : ADI::Proxy(ServiceThree)
   getter namespaced_service : ADI::Proxy(Some::Namespace::Service)
   getter service_two_extra : ADI::Proxy(ServiceTwo)
 
   def initialize(
     @service_two : ADI::Proxy(ServiceTwo),
+    @service_three : ADI::Proxy(ServiceThree),
     @namespaced_service : ADI::Proxy(Some::Namespace::Service),
     @service_two_extra : ADI::Proxy(ServiceTwo)
   )
@@ -417,6 +425,17 @@ class ServiceOne
   end
 
   def run
-    @service_two.value
+    @service_three.value
   end
 end
+
+###############
+# PARAMETERES #
+###############
+ADI.bind password, "%db.password%"
+
+@[ADI::Register(_username: "%db.username%", _credentials: ["%db.username%", "%db.host%"], public: true)]
+record ParameterClient,
+  username : String,
+  password : String,
+  credentials : Array(String)

@@ -1,6 +1,8 @@
 require "./proxy"
 require "./service_container"
 
+require "athena-config"
+
 require "compiler/crystal/macros"
 
 # :nodoc:
@@ -412,6 +414,41 @@ module Athena::DependencyInjection
   # proxy.instantiated? # => false
   # proxy.value         # => 123
   # proxy.instantiated? # => true
+  # ```
+  #
+  # ### Parameters
+  #
+  # The `Athena::Config` component provides a way to manage `ACF::Parameters`.
+  # It is possible to inject these parameters directly into services in a type safe way.
+  #
+  # Parameter injection utilizes a specially formatted string, similar to tagged services.
+  # The parameter name should be a string starting and ending with a `%`, e.g. `"%app.database.username%"`.
+  # The value within the `%` represents the "path" to the parameter from the `ACF::Parameters` base type.
+  #
+  # Parameters may be supplied either via `Athena::DependencyInjection.bind` or an explicit service argument.
+  #
+  # ```
+  # struct DatabaseConfig
+  #   getter username : String = "USERNAME"
+  # end
+  #
+  # struct AppConfig
+  #   getter name : String = "My App"
+  #   getter database : DatabaseConfig = DatabaseConfig.new
+  # end
+  #
+  # class Athena::Config::Parameters
+  #   getter app : AppConfig = AppConfig.new
+  # end
+  #
+  # ADI.bind db_username, "%app.database.username%"
+  #
+  # @[ADI::Register(_app_name: "%app.name%", public: true)]
+  # record SomeService, app_name : String, db_username : String
+  #
+  # service = ADI.container.some_service
+  # service.app_name    # => "My App"
+  # service.db_username # => "USERNAME"
   # ```
   #
   # ### Optional Services
