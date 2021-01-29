@@ -83,7 +83,6 @@ module Athena::DependencyInjection::Spec
   # end
   #
   # # `MockMyService` will now be injected across the board when using `self`.
-  #
   # # ...
   # ```
   #
