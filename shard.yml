@@ -19,7 +19,7 @@ authors:
 dependencies:
   athena-config:
     github: athena-framework/config
-    branch: refactor
+    version: ~> 0.2.0
 
 development_dependencies:
   ameba:
