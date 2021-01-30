@@ -20,7 +20,8 @@ dependencies:
 
 ## Documentation
 
-Everything is documented in the [API Docs](https://athena-framework.github.io/dependency-injection/Athena/DependencyInjection.html).
+If using the component on its own, checkout the [API documentation](https://athenaframework.org/DependencyInjection).
+If using the component as part of Athena, also checkout the [external documentation](https://athenaframework.org/components/dependency_injection).
 
 ## Contributing
 

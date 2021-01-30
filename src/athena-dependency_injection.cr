@@ -68,7 +68,7 @@ module Athena::DependencyInjection
 
   # Allows binding a *value* to a *key* in order to enable auto registration of that value.
   #
-  # Bindings allow scalar values, or those that could not otherwise be handled via [service aliases](./DependencyInjection/Register.html#aliasing-services), to be auto registered.
+  # Bindings allow scalar values, or those that could not otherwise be handled via [service aliases][Athena::DependencyInjection::Register--aliasing-services], to be auto registered.
   # This allows those arguments to be defined once and reused, as opposed to using named arguments to manually specify them for each service.
   #
   # Bindings can also be declared with a type restriction to allow taking the type restriction of the argument into account.
@@ -158,7 +158,7 @@ module Athena::DependencyInjection
   # * `public : Bool` - If the service should be directly accessible from the container.  Defaults to `false`.
   # * `public_alias : Bool` - If a service should be directly accessible from the container via an alias.  Defaults to `false`.
   # * `alias : T` - Injects `self` when this type is used as a type restriction.  See the Aliasing Services example for more information.
-  # * `tags : Array(String | NamedTuple(name: String, priority: Int32?))` - Tags that should be assigned to the service.  Defaults to an empty array.  See the [Tagging Services](./Register.html#tagging-services) example for more information.
+  # * `tags : Array(String | NamedTuple(name: String, priority: Int32?))` - Tags that should be assigned to the service.  Defaults to an empty array.  See the [Tagging Services][Athena::DependencyInjection::Register--tagging-services] example for more information.
   # * `type : T` - The type of the service within the container.  Defaults to service's types.  See the [Customizing Service's Type](#customizing-services-type) section.
   # * `factory : String | Tuple(T, String)` - Use a factory type/method to create the service.  See the [Factories](#factories) section.
   #
