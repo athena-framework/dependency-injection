@@ -20,7 +20,7 @@ dependencies:
 
 ## Documentation
 
-If using the component on its own, checkout the [API](https://athenaframework.org/DependencyInjection) documentation.
+If using the component on its own, checkout the [API documentation](https://athenaframework.org/DependencyInjection).
 If using the component as part of Athena, also checkout the [external documentation](https://athenaframework.org/components/dependency_injection)
 
 ## Contributing
