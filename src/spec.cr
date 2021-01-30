@@ -11,7 +11,7 @@
 module Athena::DependencyInjection::Spec
   # A mock implementation of `ADI::ServiceContainer` that be used within a testing context to allow for mocking out services without affecting the actual container outside of tests.
   #
-  # An example of this is when integration testing service based [ART::Controller](https://athena-framework.github.io/athena/Athena/Routing/Controller.html)s.
+  # An example of this is when integration testing service based [ART::Controller][Athena::Routing::Controller]s.
   # Service dependencies that interact with an external source, like a third party API or a database, should most likely be mocked out.
   # However your other services should be left as is in order to get the most benefit from the test.
   #
