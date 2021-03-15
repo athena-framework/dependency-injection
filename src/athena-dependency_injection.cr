@@ -531,6 +531,25 @@ module Athena::DependencyInjection
   # ADI.container.string_factory_service.value # => 20
   # ```
   #
+  # Using the `ADI::Inject` annotation on a class method is equivalent to providing that method's name as the `factory` value.
+  # For example, this is the same as the previous example:
+  #
+  # ```
+  # @[ADI::Register(_value: 10, public: true)]
+  # class StringFactoryService
+  #   getter value : Int32
+  #
+  #   @[ADI::Inject]
+  #   def self.double(value : Int32) : self
+  #     new value * 2
+  #   end
+  #
+  #   def initialize(@value : Int32); end
+  # end
+  #
+  # ADI.container.string_factory_service.value # => 20
+  # ```
+  #
   # #### Different Type
   #
   # A `Tuple` can also be provided as the `factory` value to allow using an external type's factory method to create the service.
@@ -603,6 +622,8 @@ module Athena::DependencyInjection
   # Without the `ADI::Inject` annotation, the first initializer would be used, which would fail since we are not providing a value for the `active` argument.
   # `ADI::Inject` allows telling the service container that it should use the second constructor when registering this service.  This allows a constructor overload
   # specific to DI to be used while still allowing the type to be used outside of DI via other constructors.
+  #
+  # Using the `ADI::Inject` annotation on a class method also acts a shortcut for defining a service [factory][Athena::DependencyInjection::Register--factories].
   annotation Inject; end
 
   # Returns the `ADI::ServiceContainer` for the current fiber.

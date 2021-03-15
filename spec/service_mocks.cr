@@ -374,6 +374,18 @@ class FactoryString
   def initialize(@value : Int32); end
 end
 
+@[ADI::Register(_value: 50, public: true)]
+class PseudoFactory
+  getter value : Int32
+
+  @[ADI::Inject]
+  def self.new_instance(value : Int32) : self
+    new value * 2
+  end
+
+  def initialize(@value : Int32); end
+end
+
 @[ADI::Register]
 record ValueProvider, value : Int32 = 10
 

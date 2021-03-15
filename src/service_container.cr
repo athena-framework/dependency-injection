@@ -112,8 +112,23 @@ class Athena::DependencyInjection::ServiceContainer
         {% service_ann = metadata[:service_annotation] %}
         {% service = metadata[:service] %}
 
-        # If the service has a factory, resolve the factory method versus the default initializer
-        {% initializer = metadata[:factory] ? service.class.methods.find(&.name.==(metadata[:factory][1])) : service.methods.find(&.annotation(ADI::Inject)) || service.methods.find(&.name.==("initialize")) %}
+        # Resolve which method (internal or external) should used to construct the service instance.
+        {%
+          initializer = if factory = metadata[:factory]
+                          service.class.methods.find(&.name.==(factory[1]))
+                        elsif class_initializer = service.class.methods.find(&.annotation(ADI::Inject))
+                          # Class methods with ADI::Inject should act as a factory.
+                          metadata[:factory] = {service, class_initializer.name.stringify}
+
+                          class_initializer
+                        elsif instance_initializer = service.methods.find(&.annotation(ADI::Inject))
+                          instance_initializer
+                        else
+                          service.methods.find(&.name.==("initialize"))
+                        end
+        %}
+
+        # If no initializer was resolved, assume it's the default argless constructor.
         {% initializer_args = (i = initializer) ? i.args : [] of Nil %}
 
         {%
@@ -143,7 +158,7 @@ class Athena::DependencyInjection::ServiceContainer
 
                 # Build an array of services with the given tag, along with the tag metadata
                 service_hash.each do |id, s_metadata|
-                  if t = s_metadata[:tags].find { |tag| tag[:name] == named_arg[1..-1] }
+                  if t = s_metadata[:tags].find &.[:name].==(named_arg[1..-1])
                     tagged_services << {id.id, t}
                   end
                 end
@@ -189,7 +204,7 @@ class Athena::DependencyInjection::ServiceContainer
 
                 # Build an array of services with the given tag, along with the tag metadata
                 service_hash.each do |id, s_metadata|
-                  if t = s_metadata[:tags].find { |tag| tag[:name] == binding_value[1..-1] }
+                  if t = s_metadata[:tags].find &.[:name].==(binding_value[1..-1])
                     tagged_services << {id.id, t}
                   end
                 end
