@@ -186,6 +186,10 @@ describe Athena::DependencyInjection::ServiceContainer do
       it "supports auto resolving factory method service depednecies" do
         ADI::ServiceContainer.new.factory_service.value.should eq 10
       end
+
+      it "with the ADI::Inject annotation" do
+        ADI::ServiceContainer.new.pseudo_factory.value.should eq 100
+      end
     end
 
     describe "with service proxies" do
