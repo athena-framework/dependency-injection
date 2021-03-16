@@ -451,3 +451,45 @@ record ParameterClient,
   username : String,
   password : String,
   credentials : Array(String)
+
+#################
+# CONFIGURATION #
+#################
+@[ACFA::Resolvable("some_config")]
+record SomeConfig, value : Int32 = 123 do
+  def self.configure
+    new
+  end
+end
+
+@[ACFA::Resolvable("nested.cfg")]
+record Nestedconfig, value : Int32 = 456
+
+@[ACFA::Resolvable("nilable_config")]
+record NilableConfig, value : Int32 = -1 do
+  def self.configure
+    nil
+  end
+end
+
+class Nested
+  getter cfg : Nestedconfig = Nestedconfig.new
+end
+
+class ACF::Base
+  getter some_config : SomeConfig = SomeConfig.configure
+  getter nilable_config : NilableConfig? = NilableConfig.configure
+  getter nested : Nested = Nested.new
+end
+
+@[ADI::Register(public: true)]
+class ConfigurationClient
+  getter some_config, nilable_config, nested_config
+
+  def initialize(
+    @some_config : SomeConfig,
+    @nilable_config : NilableConfig?,
+    @nested_config : Nestedconfig
+  )
+  end
+end
