@@ -241,10 +241,17 @@ class Athena::DependencyInjection::ServiceContainer
               # If no services could be resolved
               if resolved_services.size == 0
                 # Return a default value if any
-                if !initializer_arg.default_value.is_a? Nop
+
+                # First check to see if it's a resolvable configuration type.
+                if (configuration_type = initializer_arg.restriction.types.find(&.resolve.annotation ACFA::Resolvable)) && (configuration_ann = configuration_type.resolve.annotation ACFA::Resolvable)
+                  path = configuration_ann[0] || configuration_ann["path"] || configuration_type.raise "Configuration type '#{configuration_type}' has an ACFA::Resolvable annotation but is missing the type's configuration path. It was not provided as the first positional argument nor via the 'path' field."
+
+                  "ACF.config.#{path.id}".id
+                elsif !initializer_arg.default_value.is_a? Nop
+                  # Otherwise fallback on a default value, if any
                   initializer_arg.default_value
-                  # including `nil` if thats a possibility
                 elsif initializer_arg.restriction.resolve.nilable?
+                  # including `nil` if thats a possibility
                   nil
                 else
                   # otherwise raise an exception
@@ -254,7 +261,7 @@ class Athena::DependencyInjection::ServiceContainer
                 # If only one was matched, return it,
                 # using an ADI::Proxy object if thats what the initializer expects.
                 if initializer_arg.restriction.resolve < ADI::Proxy
-                  "ADI::Proxy.new(#{resolved_services[0]}, ->#{resolved_services[0].id.id})".id
+                  "ADI::Proxy.new(#{resolved_services[0]}, ->#{resolved_services[0].id})".id
                 else
                   resolved_services[0].id
                 end

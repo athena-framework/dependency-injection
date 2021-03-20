@@ -221,5 +221,12 @@ describe Athena::DependencyInjection::ServiceContainer do
       service.password.should eq "PASS"
       service.credentials.should eq ["USER", "HOST"]
     end
+
+    it "with configuration" do
+      service = ADI::ServiceContainer.new.configuration_client
+      service.some_config.value.should eq 123
+      service.nilable_config.should be_nil
+      service.nested_config.value.should eq 456
+    end
   end
 end
