@@ -19,7 +19,7 @@ authors:
 dependencies:
   athena-config:
     github: athena-framework/config
-    branch: deprecate-configuration-resolver
+    version: ~> 0.3.0
 
 development_dependencies:
   ameba:
