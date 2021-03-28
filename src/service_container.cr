@@ -229,7 +229,7 @@ class Athena::DependencyInjection::ServiceContainer
 
               # Otherwise resolve possible services based on type
               service_hash.each do |id, s_metadata|
-                if (type = initializer_arg.restriction.resolve?) &&
+                if !(r = initializer_arg.restriction).is_a?(Nop) && (type = r.resolve?) &&
                    (
                      s_metadata[:service] <= type ||
                      (type < ADI::Proxy && s_metadata[:service] <= type.type_vars.first.resolve)
@@ -243,7 +243,7 @@ class Athena::DependencyInjection::ServiceContainer
                 # Return a default value if any
 
                 # First check to see if it's a resolvable configuration type.
-                if (configuration_type = initializer_arg.restriction.types.find(&.resolve.annotation ACFA::Resolvable)) && (configuration_ann = configuration_type.resolve.annotation ACFA::Resolvable)
+                if !(r = initializer_arg.restriction).is_a?(Nop) && (configuration_type = initializer_arg.restriction.types.find(&.resolve.annotation ACFA::Resolvable)) && (configuration_ann = configuration_type.resolve.annotation ACFA::Resolvable)
                   path = configuration_ann[0] || configuration_ann["path"] || configuration_type.raise "Configuration type '#{configuration_type}' has an ACFA::Resolvable annotation but is missing the type's configuration path. It was not provided as the first positional argument nor via the 'path' field."
 
                   "ACF.config.#{path.id}".id

@@ -21,7 +21,9 @@ alias ADI = Athena::DependencyInjection
 #
 # * See `ADI::Register` for documentation on registering services.
 #
-# NOTE: It is highly recommended to use interfaces as opposed to concrete types when defining the initializers for both services and non-services.
+# !!!tip
+#     It is highly recommended to use interfaces as opposed to concrete types when defining the initializers for both services and non-services.
+#
 # Using interfaces allows changing the functionality of a type by just changing what service gets injected into it, such as via an alias.
 # See this [blog post](https://dev.to/blacksmoke16/dependency-injection-in-crystal-2d66#plug-and-play) for an example of this.
 module Athena::DependencyInjection
@@ -573,8 +575,9 @@ module Athena::DependencyInjection
   #
   # Generic arguments can be provided as positional arguments within the `ADI::Register` annotation.
   #
-  # NOTE: Services based on generic types _MUST_ explicitly provide a name via the `name` field within the `ADI::Register` annotation
-  # since there wouldn't be a way to tell them apart from the class name alone.
+  # !!!note
+  #     Services based on generic types _MUST_ explicitly provide a name via the `name` field within the `ADI::Register` annotation
+  #     since there wouldn't be a way to tell them apart from the class name alone.
   #
   # ```
   # @[ADI::Register(Int32, Bool, name: "int_service", public: true)]
