@@ -228,5 +228,9 @@ describe Athena::DependencyInjection::ServiceContainer do
       service.nilable_config.should be_nil
       service.nested_config.value.should eq 456
     end
+
+    it "when the constructor arg is not typed, but has a default" do
+      ADI::ServiceContainer.new.some_un_typed_service.service.id.should eq 1234
+    end
   end
 end

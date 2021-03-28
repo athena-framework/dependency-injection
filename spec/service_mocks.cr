@@ -493,3 +493,15 @@ class ConfigurationClient
   )
   end
 end
+
+########################
+# UNTYPED WITH DEFAULT #
+########################
+record NotAService, id : Int32 = 1234
+
+@[ADI::Register(public: true)]
+class SomeUnTypedService
+  getter service : NotAService
+
+  def initialize(@service = NotAService.new); end
+end
