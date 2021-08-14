@@ -723,3 +723,152 @@ module Athena::DependencyInjection
     Fiber.current.container
   end
 end
+
+macro service_locator(name, *service_types)
+  @[ADI::Register]
+  class {{name.id}}
+    private class Locator < ADI::ServiceContainer
+      {% for type in service_types %}
+        def get(service_type : {{type.id}}.class) : {{type}}
+          super
+        end
+      {% end %}
+    end
+
+    @@services = {{service_types}}
+
+    @locator = Locator.new
+
+    {% for type in service_types %}
+      def get(service_type : {{type.id}}.class) : {{type}}
+        @locator.get service_type
+      end
+    {% end %}
+    
+    def tags_for(service_type : T.class) : Array(ADI::AbstractTag) forall T
+      \{% T.raise "Service '#{T}' is not registered with '#{@type}'." unless {{service_types}}.includes? T %}
+      @locator.tags_for service_type
+    end    
+    
+    def tag_for(service_type : T.class, name : String) : ADI::AbstractTag? forall T
+      \{% T.raise "Service '#{T}' is not registered with '#{@type}'." unless {{service_types}}.includes? T %}
+      @locator.tag_for service_type, name
+    end
+    
+    def services(&)
+      {% for type in service_types %}
+        yield {{type}}, self.tags_for({{type}})
+      {% end %}
+    end
+    
+    def services
+      @@services
+    end
+  end
+end
+
+abstract struct Base; end
+
+@[ADI::Register]
+struct One < Base
+  def self.name
+    "One"
+  end
+
+  def initialize
+    pp "new One"
+  end
+end
+
+TAG = "foo"
+
+struct CustomTag < ADI::AbstractTag
+  getter value : Int32
+
+  def initialize(@value : Int32, name : String, priority : Int32? = nil, *, tag_type = nil)
+    super name, priority
+  end
+end
+
+@[ADI::Register(tags: [{name: "boo"}, {name: "foo"}])]
+struct Two < Base
+  def self.name
+    "Two"
+  end
+
+  def initialize
+    pp "new Two"
+  end
+end
+
+@[ADI::Register(tags: [{name: "baz", value: 123, tag_type: CustomTag}])]
+struct Three < Base
+  def self.name
+    "Three"
+  end
+
+  def initialize
+    pp "new Three"
+  end
+end
+
+@[ADI::Register(tags: ["foo"])]
+struct Four < Base
+  def self.name
+    "Four"
+  end
+
+  def initialize
+    pp "new Four"
+  end
+end
+
+# # TOOD: Nilable types return `nil` if that service isn't defined.
+#
+
+{% begin %}
+  service_locator CommandLocator, One, Two, Three
+{% end %}
+
+@[ADI::Register(public: true)]
+class Handler
+  # @service_map = Hash(String, Base.class).new
+
+  # forward_missing_to @locator
+
+  def initialize(@locator : CommandLocator); end
+
+  #   # @locator.services.each do |klass|
+  #   #   @service_map[klass.name] = klass
+  #   # end
+
+  #   @locator.services do |service, tags|
+  #     pp tags
+  #     @service_map[service.name] = service
+  #   end
+  # end
+
+  def run(type)
+    pp @locator.get type
+  end
+end
+
+handler = ADI.container.handler
+
+# pp handler.tags_for Four
+# pp handler
+
+handler.run Two
+
+puts "inbetween"
+handler.run One
+
+# =>
+# "new Two"
+# Two()
+# inbetween
+# "new One"
+# One()
+
+puts "inbetween"
+handler.run Four

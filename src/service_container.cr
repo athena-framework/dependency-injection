@@ -1,3 +1,14 @@
+abstract struct Athena::DependencyInjection::AbstractTag
+  getter name : String
+  getter priority : Int32?
+
+  # TODO: Remove need for `tag_type` to live on this type.
+  # It should be deleted before the double splat.
+  def initialize(@name : String, @priority : Int32? = nil, *, tag_type = nil); end
+end
+
+struct Athena::DependencyInjection::Tag < Athena::DependencyInjection::AbstractTag; end
+
 # Where the instantiated services live.
 #
 # If a service is public, a getter based on the service's name as well as its type is defined.  Otherwise, services are only available via constructor DI.
@@ -310,6 +321,20 @@ class Athena::DependencyInjection::ServiceContainer
 
         {% service_hash[service_id][:arguments] = arguments %}
       {% end %}
+      
+      # Keep a reference to services and their tags.
+      {% if service_hash.empty? %}
+        @@services = Hash(NoReturn, NoReturn).new 0
+      {% else %}
+        {% begin %}
+          @@services = {
+            {% for service_id, metadata in service_hash %}
+              {% service_tags = metadata[:tags].map { |tag| tag[:tag_type] != nil ? "#{tag[:tag_type]}.new(#{tag.double_splat})".id : "ADI::Tag.new(#{tag.double_splat})".id } %}
+              {{metadata[:service].id}} => ({{service_tags.empty? ? "Array(ADI::AbstractTag).new".id : "#{service_tags} of ADI::AbstractTag".id}}),
+            {% end %}
+          }
+        {% end %}
+      {% end %}
 
       {% final_services = {} of Nil => Nil %}
 
@@ -339,11 +364,9 @@ class Athena::DependencyInjection::ServiceContainer
 
         {% if metadata[:public] != true %}private{% end %} getter {{service_id.id}} : {{ivar_type}} { {{constructor_service}}.{{constructor_method.id}}({{metadata[:arguments].splat}}) }
 
-        {% if metadata[:public] %}
-          def get(service : {{service}}.class) : {{service}}
+        {% if metadata[:public_alias] != true %}private{% end %} def get(service : {{service}}.class) : {{service}}
             {{service_id.id}}
           end
-        {% end %}
       {% end %}
 
       # Define getters for aliased service, if the alias is public, make the getter public and also define a type based getter
@@ -354,12 +377,24 @@ class Athena::DependencyInjection::ServiceContainer
 
         {% if metadata[:public_alias] != true %}private{% end %} def {{service_type.name.gsub(/::/, "_").underscore.id}} : {{type}}; {{service_id.id}}; end
 
-        {% if metadata[:public_alias] %}
-          def get(service : {{service_type}}.class) : {{service_type}}
-            {{service_id.id}}
-          end
-        {% end %}
+        {% if metadata[:public_alias] != true %}private{% end %} def get(service : {{service_type}}.class) : {{service_type}}
+          {{service_id.id}}
+        end
       {% end %}
+
+      # Initializes the container.  Auto registering annotated services.
+      def initialize
+        # Work around for https://github.com/crystal-lang/crystal/issues/7975
+        {{@type}}
+      end
+      
+      def tags_for(service_type : T.class) : Array(ADI::AbstractTag) forall T
+        @@services[service_type]
+      end
+      
+      def tag_for(service_type : T.class, name : String) : ADI::AbstractTag? forall T
+        self.tags_for(service_type).find { |tag| tag.name == name }
+      end
     {% end %}
   end
 end
