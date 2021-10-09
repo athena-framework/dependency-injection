@@ -32,6 +32,47 @@ module Athena::DependencyInjection
   private BINDINGS            = {} of Nil => Nil
   private AUTO_CONFIGURATIONS = {} of Nil => Nil
 
+  macro tagged(&)
+    # This is essentially copied from the service container logic.
+    # TODO: DRY up the code when you are able to reuse macro code.
+    {% tagged_services = [] of Nil %}
+    {% for service in Object.all_subclasses.select &.annotation(ADI::Register) %}
+      {% if (annotations = service.annotations(ADI::Register)) && !annotations.empty? && !service.abstract? %}
+        {% for ann in annotations %}
+          {% auto_configuration = (key = AUTO_CONFIGURATIONS.keys.find &.>=(service.resolve)) ? AUTO_CONFIGURATIONS[key] : {} of Nil => Nil %}
+
+          {% if (ann_tags = ann[:tags]) || (ann_tags = auto_configuration[:tags]) %}
+            {% ann_tags.each do |tag|
+                 tag = if tag.is_a? StringLiteral
+                         {name: tag}
+                       elsif tag.is_a? Path
+                         {name: tag.resolve}
+                       elsif tag.is_a? NamedTupleLiteral
+                         # Resolve a constant to its value if used as a tag name
+                         if tag[:name].is_a? Path
+                           tag[:name] = tag[:name].resolve
+                         end
+
+                         tag
+                       else
+                         next
+                       end
+
+                 # pp(yield(tag, service))
+
+                 tagged_services << service if yield(tag, service)
+               end %}
+          {% end %}
+        {% end %}
+      {% end %}
+    {% end %}
+    {{tagged_services.empty? ? "Array(Nil).new".id : tagged_services}}
+  end
+
+  macro tagged(name)
+    ADI.tagged { |tag, service| tag[:name] == name }
+  end
+
   # Applies the provided *options* to any registered service of the provided *type*.
   #
   # A common use case of this would be to apply a specific tag to all instances of an interface; thus preventing the need to manually apply the tag for each implementation.
@@ -785,7 +826,7 @@ TAG = "foo"
 struct CustomTag < ADI::AbstractTag
   getter value : Int32
 
-  def initialize(@value : Int32, name : String, priority : Int32? = nil, *, tag_type = nil)
+  def initialize(@value : Int32, name : String, priority : Int32? = nil)
     super name, priority
   end
 end
@@ -801,7 +842,7 @@ struct Two < Base
   end
 end
 
-@[ADI::Register(tags: [{name: "baz", value: 123, tag_type: CustomTag}])]
+@[ADI::Register(tags: [TAG, {name: "baz", value: 123, tag_type: CustomTag}])]
 struct Three < Base
   def self.name
     "Three"
@@ -832,21 +873,20 @@ end
 
 @[ADI::Register(public: true)]
 class Handler
-  # @service_map = Hash(String, Base.class).new
+  @service_map = Hash(String, Base.class).new
 
-  # forward_missing_to @locator
+  forward_missing_to @locator
 
-  def initialize(@locator : CommandLocator); end
+  def initialize(@locator : CommandLocator)
+    # @locator.services.each do |klass|
+    #   @service_map[klass.name] = klass
+    # end
 
-  #   # @locator.services.each do |klass|
-  #   #   @service_map[klass.name] = klass
-  #   # end
-
-  #   @locator.services do |service, tags|
-  #     pp tags
-  #     @service_map[service.name] = service
-  #   end
-  # end
+    @locator.services do |service, tags|
+      pp tags
+      @service_map[service.name] = service
+    end
+  end
 
   def run(type)
     pp @locator.get type
@@ -855,8 +895,9 @@ end
 
 handler = ADI.container.handler
 
+pp handler.tags_for Three
 # pp handler.tags_for Four
-# pp handler
+pp handler
 
 handler.run Two
 
@@ -871,4 +912,4 @@ handler.run One
 # One()
 
 puts "inbetween"
-handler.run Four
+# handler.run Four

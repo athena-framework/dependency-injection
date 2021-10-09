@@ -4,7 +4,7 @@ abstract struct Athena::DependencyInjection::AbstractTag
 
   # TODO: Remove need for `tag_type` to live on this type.
   # It should be deleted before the double splat.
-  def initialize(@name : String, @priority : Int32? = nil, *, tag_type = nil); end
+  def initialize(@name : String, @priority : Int32? = nil); end
 end
 
 struct Athena::DependencyInjection::Tag < Athena::DependencyInjection::AbstractTag; end
@@ -329,7 +329,11 @@ class Athena::DependencyInjection::ServiceContainer
         {% begin %}
           @@services = {
             {% for service_id, metadata in service_hash %}
-              {% service_tags = metadata[:tags].map { |tag| tag[:tag_type] != nil ? "#{tag[:tag_type]}.new(#{tag.double_splat})".id : "ADI::Tag.new(#{tag.double_splat})".id } %}
+              {% service_tags = metadata[:tags].map do |tag|
+                   tag_args = {name: ""}
+                   tag.to_a.select { |(k, _)| k != :tag_type }.each { |(k, v)| tag_args[k] = v }
+                   tag[:tag_type] != nil ? "#{tag[:tag_type]}.new(#{tag_args.double_splat})".id : "ADI::Tag.new(#{tag_args.double_splat})".id
+                 end %}
               {{metadata[:service].id}} => ({{service_tags.empty? ? "Array(ADI::AbstractTag).new".id : "#{service_tags} of ADI::AbstractTag".id}}),
             {% end %}
           }
