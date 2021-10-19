@@ -55,9 +55,9 @@ private TEST_CASES = {
     "Failed to register service 'klass'.  Arrays more than two levels deep are not currently supported.",
   },
   {
-    # Just assert services are not public by default
-    "private_service",
-    "private method 'service' called for Athena::DependencyInjection::ServiceContainer",
+    # Assert the service has been removed from the container
+    "private_unused_service",
+    "undefined method 'service' for Athena::DependencyInjection::ServiceContainer",
   },
   {
     # A name must be supplied if using a NamedTupleLiteral tag

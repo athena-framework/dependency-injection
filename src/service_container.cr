@@ -12,6 +12,10 @@ class Athena::DependencyInjection::ServiceContainer
 
       # Define a hash to map alias types to a service ID.
       {% alias_hash = {} of Nil => Nil %}
+      
+      # Define an array to store the IDs of all used services.
+      # I.e. that another service depends on, or is public.
+      {% used_service_ids = [] of Nil %}
 
       # Register each service in the hash along with some related metadata.
       {% for service in Object.all_subclasses.select &.annotation(ADI::Register) %}
@@ -144,6 +148,7 @@ class Athena::DependencyInjection::ServiceContainer
                   elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?('@')
                     service_name = arr_arg[1..-1]
                     raise "Failed to register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}' from named argument value '#{named_arg}'." unless service_hash[service_name]
+                    used_service_ids << service_name.id
                     service_name.id
                   elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?('%') && arr_arg.ends_with?('%')
                     "ACF.parameters.#{arr_arg[1..-2].id}".id
@@ -159,6 +164,7 @@ class Athena::DependencyInjection::ServiceContainer
                 # Build an array of services with the given tag, along with the tag metadata
                 service_hash.each do |id, s_metadata|
                   if t = s_metadata[:tags].find &.[:name].==(named_arg[1..-1])
+                    used_service_ids << id.id
                     tagged_services << {id.id, t}
                   end
                 end
@@ -192,6 +198,7 @@ class Athena::DependencyInjection::ServiceContainer
                   elsif arr_arg.is_a?(StringLiteral) && arr_arg.starts_with?('@')
                     service_name = arr_arg[1..-1]
                     raise "Failed to register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}' from binding value '#{binding_value}'." unless service_hash[service_name]
+                    used_service_ids << service_name.id
                     service_name.id
                   else
                     arr_arg
@@ -205,6 +212,7 @@ class Athena::DependencyInjection::ServiceContainer
                 # Build an array of services with the given tag, along with the tag metadata
                 service_hash.each do |id, s_metadata|
                   if t = s_metadata[:tags].find &.[:name].==(binding_value[1..-1])
+                    used_service_ids << id.id
                     tagged_services << {id.id, t}
                   end
                 end
@@ -258,6 +266,8 @@ class Athena::DependencyInjection::ServiceContainer
                   initializer_arg.raise "Failed to auto register service '#{service_id.id}'.  Could not resolve argument '#{initializer_arg}'."
                 end
               elsif resolved_services.size == 1
+                used_service_ids << resolved_services[0].id
+
                 # If only one was matched, return it,
                 # using an ADI::Proxy object if thats what the initializer expects.
                 if initializer_arg.restriction.resolve < ADI::Proxy
@@ -268,15 +278,20 @@ class Athena::DependencyInjection::ServiceContainer
               else
                 # Otherwise fallback on the argument's name as well
                 if resolved_service = resolved_services.find(&.==(initializer_arg.name))
+                  used_service_ids << resolved_service.id
+
                   # use an ADI::Proxy object if thats what the initializer expects.
                   if initializer_arg.restriction.resolve < ADI::Proxy
                     "ADI::Proxy.new(#{resolved_service}, ->#{resolved_service.id})".id
                   else
+                    used_service_ids << resolved_service.id
                     resolved_service.id
                   end
 
                   # If no service with that name could be resolved, check the alias map for the restriction
                 elsif aliased_service = alias_hash[(initializer_arg.restriction.resolve < ADI::Proxy ? initializer_arg.restriction.type_vars.first.resolve : initializer_arg.restriction.resolve)]
+                  used_service_ids << aliased_service.id
+
                   # If one is found returned the aliased service
                   # use an ADI::Proxy object if thats what the initializer expects.
                   if initializer_arg.restriction.resolve < ADI::Proxy
@@ -295,6 +310,17 @@ class Athena::DependencyInjection::ServiceContainer
 
         {% service_hash[service_id][:arguments] = arguments %}
       {% end %}
+
+      {% final_services = {} of Nil => Nil %}
+
+      # Remove private unused dependencies.
+      {% service_hash = service_hash.each do |service_id, metadata|
+           # Services that are private and not used in other dependencies can safely be removed.
+           if metadata[:public] == true || metadata[:public_alias] == true || used_service_ids.includes?(service_id.id)
+             final_services[service_id] = metadata
+           end
+         end %}
+      {% service_hash = final_services %}
 
       # Define getters for each service, if the service is public, make the getter public and also define a type based getter
       {% for service_id, metadata in service_hash %}
@@ -334,12 +360,6 @@ class Athena::DependencyInjection::ServiceContainer
           end
         {% end %}
       {% end %}
-
-      # Initializes the container.  Auto registering annotated services.
-      def initialize
-        # Work around for https://github.com/crystal-lang/crystal/issues/7975
-        {{@type}}
-      end
     {% end %}
   end
 end
