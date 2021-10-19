@@ -12,7 +12,7 @@ class Athena::DependencyInjection::ServiceContainer
 
       # Define a hash to map alias types to a service ID.
       {% alias_hash = {} of Nil => Nil %}
-      
+
       # Define an array to store the IDs of all used services.
       # I.e. that another service depends on, or is public.
       {% used_service_ids = [] of Nil %}
