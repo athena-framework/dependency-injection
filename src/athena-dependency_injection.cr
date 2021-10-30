@@ -27,6 +27,8 @@ alias ADI = Athena::DependencyInjection
 # Using interfaces allows changing the functionality of a type by just changing what service gets injected into it, such as via an alias.
 # See this [blog post](https://dev.to/blacksmoke16/dependency-injection-in-crystal-2d66#plug-and-play) for an example of this.
 module Athena::DependencyInjection
+  VERSION = "0.3.2"
+
   private BINDINGS            = {} of Nil => Nil
   private AUTO_CONFIGURATIONS = {} of Nil => Nil
 
